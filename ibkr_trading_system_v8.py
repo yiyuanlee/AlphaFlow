@@ -1,22 +1,23 @@
 import asyncio
 import sys
+import io
 
-# --- 修复 Python 3.12+ 的事件循环问题 ---
+# --- 修复 Windows 终端乱码与事件循环问题 ---
+if sys.platform == 'win32':
+    # 强制标准输出和错误输出使用 UTF-8 编码
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 try:
     asyncio.get_event_loop()
 except RuntimeError:
     asyncio.set_event_loop(asyncio.new_event_loop())
 
 from ib_insync import *
+import ib_insync.util as util
 import pandas as pd
 import numpy as np
-import time
 import logging
-import io
-
-# 确保 Windows 上的输出编码正确
-if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # --- 配置区 ---
 TWS_HOST = '127.0.0.1'
@@ -38,8 +39,12 @@ TRAILING_STOP = 0.12
 RISK_PER_TRADE = 0.015
 INDEX_MULTIPLIER = 3.0
 
-# 设置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+# 设置日志：显式指定 stream 为 sys.stdout 以应用上面的编码设置
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(message)s',
+    stream=sys.stdout  # 关键修复：确保日志使用我们修复过的输出流
+)
 logger = logging.getLogger()
 
 class LiveSystemV8:
@@ -55,7 +60,7 @@ class LiveSystemV8:
             exit()
 
     def get_indicators(self, bars):
-        df = util.asPandas(bars)
+        df = util.df(bars)
         # EMA
         df['ema_fast'] = df['close'].ewm(span=FAST_PERIOD).mean()
         df['ema_slow'] = df['close'].ewm(span=SLOW_PERIOD).mean()
@@ -83,47 +88,52 @@ class LiveSystemV8:
         return df.iloc[-1]
 
     def check_signals(self):
-        # 1. 获取账户摘要
         summary = self.ib.accountSummary()
-        net_liq = float([i.value for i in summary if i.tag == 'NetLiquidation'][0])
+        net_liq_items = [i.value for i in summary if i.tag == 'NetLiquidation']
+        if not net_liq_items:
+            logger.warning("未能获取到账户净值，跳过本轮扫描。")
+            return
+            
+        net_liq = float(net_liq_items[0])
         logger.info(f"当前账户总资产: {net_liq:.2f} USD")
         
-        # 2. 检查持仓和新信号
         for symbol in TICKERS:
             contract = Stock(symbol, 'SMART', 'USD')
             self.ib.qualifyContracts(contract)
             
-            # 请求历史数据
             bars = self.ib.reqHistoricalData(
                 contract, endDateTime='', durationStr='300 D',
                 barSizeSetting='1 day', whatToShow='ADJUSTED_LAST', useRTH=True)
             
-            if not bars: continue
+            if not bars: 
+                logger.warning(f"无法获取 {symbol} 的历史数据")
+                continue
+                
             latest = self.get_indicators(bars)
             curr_price = bars[-1].close
+            
+            logger.info(f"检查 {symbol:4}: 价格={curr_price:.2f}, EMA10={latest['ema_fast']:.2f}, EMA25={latest['ema_slow']:.2f}, ADX={latest['adx']:.1f}")
             
             pos = [p for p in self.ib.positions() if p.contract.symbol == symbol]
             
             if pos:
-                # 已有持仓：检查离场逻辑
                 position = pos[0]
                 if latest['ema_fast'] < latest['ema_slow']:
                     logger.info(f"🚩 [{symbol}] EMA 死叉，执行卖出离场。价格: {curr_price}")
                     self.ib.placeOrder(contract, MarketOrder('SELL', abs(position.position)))
             else:
-                # 无持仓：检查入场逻辑
-                if (curr_price > latest['ema_trend'] and 
-                    latest['ema_fast'] > latest['ema_slow'] and 
-                    latest['adx'] > ADX_THRESHOLD):
-                    
-                    # 风险管理计算
+                cond_trend = curr_price > latest['ema_trend']
+                cond_cross = latest['ema_fast'] > latest['ema_slow']
+                cond_adx = latest['adx'] > ADX_THRESHOLD
+                
+                if cond_trend and cond_cross and cond_adx:
                     mult = INDEX_MULTIPLIER if symbol in INDICES else 1.0
                     risk_amt = net_liq * RISK_PER_TRADE * mult
                     risk_per_share = max(latest['atr'] * ATR_MULTIPLIER, 0.01)
                     size = int(risk_amt / risk_per_share)
                     
                     if size > 0:
-                        logger.info(f"🚀 [{symbol}] 信号触发！ADX: {latest['adx']:.1f}，下单 {size} 股")
+                        logger.info(f"🚀 [{symbol}] 信号触发！下单 {size} 股")
                         self.ib.placeOrder(contract, MarketOrder('BUY', size))
 
     def run(self):
