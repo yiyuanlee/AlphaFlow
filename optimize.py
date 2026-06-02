@@ -111,15 +111,9 @@ def fetch_data(ticker, start, end):
 # ============================================================
 # 单次回测
 # ============================================================
-def run_backtest(ticker, params, config):
+def run_backtest(ticker, params, config, df):
     cash      = config['backtest']['initial_cash']
     commission = config['backtest']['commission']
-    start     = config['backtest']['start_date']
-    end       = config['backtest']['end_date']
-
-    df = fetch_data(ticker, start, end)
-    if df is None or len(df) < 60:
-        return None
 
     cerebro = bt.Cerebro()
     cerebro.broker.setcash(cash)
@@ -148,6 +142,15 @@ def grid_search(ticker, config):
     print(f'\n🔍 网格搜索: {ticker}')
     print('=' * 50)
 
+    start = config['backtest']['start_date']
+    end   = config['backtest']['end_date']
+    
+    # 提前下载数据，避免在网格搜索循环中重复请求网络
+    df = fetch_data(ticker, start, end)
+    if df is None or len(df) < 60:
+        print(f"  [!] {ticker} 数据获取失败或条目不足，跳过")
+        return []
+
     param_grid = {
         'fast_period':    [8, 10, 12, 15],
         'slow_period':    [20, 25, 30, 35],
@@ -165,11 +168,11 @@ def grid_search(ticker, config):
     results = []
     for i, combo in enumerate(combos, 1):
         params = dict(zip(keys, combo))
-        r = run_backtest(ticker, params, config)
+        r = run_backtest(ticker, params, config, df)
         if r:
             r['params'] = params
             results.append(r)
-        if i % 50 == 0:
+        if i % 100 == 0:
             print(f'  进度: {i}/{total} ({i*100//total}%)')
 
     results.sort(key=lambda x: x['return'], reverse=True)

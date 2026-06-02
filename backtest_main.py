@@ -138,38 +138,29 @@ class AlphaFlowStrategy(bt.Strategy):
             is_index = d._name in ['VOO', 'QQQ']
 
             if pos:
-                if is_index:
-                    continue  # 指数长线持有，不触发任何止盈止损逻辑
                 ind['highest_price'] = max(ind['highest_price'], d.close[0])
-                # ATR 止损
+                
+                # 1. 趋势破坏退场 (收盘价 < 200日线)
+                if d.close[0] < ind['ema_trend'][0]:
+                    self.close(d)
+                    continue
+                # 2. ATR 止损
                 if d.close[0] < ind['stop_price']:
                     self.close(d)
                     continue
-                # ATR 动态移动止盈
+                # 3. ATR 动态移动止盈
                 atr_trail = ind['highest_price'] - ind['atr'][0] * self.p.trailing_atr_mult
                 pct_trail = ind['highest_price'] * (1.0 - self.p.trailing_stop)
                 trailing_level = min(atr_trail, pct_trail)
                 if d.close[0] < trailing_level:
                     self.close(d)
                     continue
-                # 死叉离场
+                # 4. 死叉离场
                 if ind['crossover'] < 0:
                     self.close(d)
 
             else:
-                if is_index:
-                    # 指数长线持有：在第一天（无持仓时）直接买入，平分 index 的配置额度（假设 VOO 和 QQQ 两个指数，各一半）
-                    target_val = total_value * (self.p.alloc_index / 2.0)
-                    available_cash = self.broker.get_cash() * 0.95
-                    actual_val = max(min(target_val, available_cash), 0)
-                    
-                    size = int(actual_val / d.close[0])
-                    if size > 0:
-                        self.buy(d, size=size)
-                        index_exposure += size * d.close[0]
-                    continue
-
-                # 个股：继续动量趋势策略
+                # 动量趋势入场策略
                 trend_ok  = d.close[0] > ind['ema_trend'][0]
                 cross_ok  = ind['crossover'] > 0
                 rsi_ok    = ind['rsi'][0] < self.p.rsi_upper
@@ -177,15 +168,21 @@ class AlphaFlowStrategy(bt.Strategy):
                 vol_ok    = ind['atr'][0] > ind['atr_sma'][0] * self.p.vol_filter_ratio
 
                 if trend_ok and cross_ok and rsi_ok and adx_ok and vol_ok:
-                    risk_amount = total_value * self.p.risk_per_trade
+                    # 指数获得 3 倍风险乘数，个股 1 倍
+                    risk_mult = 3.0 if is_index else 1.0
+                    risk_amount = total_value * self.p.risk_per_trade * risk_mult
                     atr_stop    = max(ind['atr'][0] * self.p.atr_multiplier, 0.01)
                     size = int(risk_amount / atr_stop)
                     
                     order_val = size * d.close[0]
                     
-                    # 资金池分配检查（个股）
-                    max_allowed_val = total_value * self.p.alloc_stock
-                    available_val = max_allowed_val - stock_exposure
+                    # 资金池分配检查
+                    if is_index:
+                        max_allowed_val = total_value * self.p.alloc_index
+                        available_val = max_allowed_val - index_exposure
+                    else:
+                        max_allowed_val = total_value * self.p.alloc_stock
+                        available_val = max_allowed_val - stock_exposure
                         
                     # 取可用分配额度和账户实际可用现金的较小值
                     available_cash = self.broker.get_cash() * 0.95
@@ -199,8 +196,11 @@ class AlphaFlowStrategy(bt.Strategy):
                         
                     self.buy(d, size=size)
                     
-                    # 更新敞口，防止同一次 next() 循环中连续超买
-                    stock_exposure += size * d.close[0]
+                    # 更新已用敞口，避免同一次 next() 循环中超买
+                    if is_index:
+                        index_exposure += size * d.close[0]
+                    else:
+                        stock_exposure += size * d.close[0]
 
 
 # ============================================================
