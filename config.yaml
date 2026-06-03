@@ -38,7 +38,7 @@ backtest:
   initial_cash: 10000.0    # 初始资金
   commission: 0.001       # 交易佣金 (0.1%)
   start_date: "2010-01-01" # [P0] 延长至 2010，覆盖多个牛熊周期
-  end_date: "2026-05-13"
+  end_date: "2026-06-03"
 
 live:
   tws_host: "127.0.0.1"

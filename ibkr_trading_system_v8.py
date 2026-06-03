@@ -22,12 +22,14 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
+# asyncio.get_event_loop() is deprecated in Python 3.10+
 try:
-    asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 except RuntimeError:
-    asyncio.set_event_loop(asyncio.new_event_loop())
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
-from ib_insync import *
+from ib_insync import IB, Stock, MarketOrder
 import ib_insync.util as util
 import pandas as pd
 import numpy as np
@@ -57,24 +59,31 @@ if config and 'live' in config:
 
 if config and 'strategy' in config:
     s = config['strategy']
-    FAST_PERIOD = s.get('fast_period', 10)
-    SLOW_PERIOD = s.get('slow_period', 25)
-    TREND_PERIOD = s.get('trend_period', 200)
-    ADX_PERIOD = s.get('adx_period', 14)
-    ADX_THRESHOLD = s.get('adx_threshold', 20)
-    ATR_PERIOD = s.get('atr_period', 14)
-    ATR_MULTIPLIER = s.get('atr_multiplier', 2.5)
-    TRAILING_STOP = s.get('trailing_stop', 0.12)
+    FAST_PERIOD      = s.get('fast_period', 10)
+    SLOW_PERIOD      = s.get('slow_period', 25)
+    TREND_PERIOD     = s.get('trend_period', 200)
+    RSI_PERIOD       = s.get('rsi_period', 14)
+    RSI_UPPER        = s.get('rsi_upper', 65)
+    ADX_PERIOD       = s.get('adx_period', 14)
+    ADX_THRESHOLD    = s.get('adx_threshold', 20)
+    ATR_PERIOD       = s.get('atr_period', 14)
+    ATR_MULTIPLIER   = s.get('atr_multiplier', 2.5)
+    VOL_FILTER_PERIOD = s.get('vol_filter_period', 100)
+    VOL_FILTER_RATIO  = s.get('vol_filter_ratio', 0.8)
+    TRAILING_STOP    = s.get('trailing_stop', 0.12)
 else:
-    # 默认参数
-    FAST_PERIOD = 10
-    SLOW_PERIOD = 25
-    TREND_PERIOD = 200
-    ADX_PERIOD = 14
-    ADX_THRESHOLD = 20
-    ATR_PERIOD = 14
-    ATR_MULTIPLIER = 2.5
-    TRAILING_STOP = 0.12
+    FAST_PERIOD      = 10
+    SLOW_PERIOD      = 25
+    TREND_PERIOD     = 200
+    RSI_PERIOD       = 14
+    RSI_UPPER        = 65
+    ADX_PERIOD       = 14
+    ADX_THRESHOLD    = 20
+    ATR_PERIOD       = 14
+    ATR_MULTIPLIER   = 2.5
+    VOL_FILTER_PERIOD = 100
+    VOL_FILTER_RATIO  = 0.8
+    TRAILING_STOP    = 0.12
 
 if config and 'risk' in config:
     r = config['risk']
@@ -225,19 +234,30 @@ class LiveSystemV8:
         # 4. ADX (Welles Wilder 标准定义，并使用 Wilder 平滑)
         up_move = df['high'].diff()
         down_move = -df['low'].diff()
-        
+
         plus_dm = np.where((up_move > down_move) & (up_move > 0), up_move, 0.0)
         minus_dm = np.where((down_move > up_move) & (down_move > 0), down_move, 0.0)
-        
+
         plus_dm = pd.Series(plus_dm, index=df.index)
         minus_dm = pd.Series(minus_dm, index=df.index)
-        
+
         tr_smooth = tr.ewm(span=2 * ADX_PERIOD - 1, adjust=False).mean()
         plus_di = 100 * (plus_dm.ewm(span=2 * ADX_PERIOD - 1, adjust=False).mean() / tr_smooth)
         minus_di = 100 * (minus_dm.ewm(span=2 * ADX_PERIOD - 1, adjust=False).mean() / tr_smooth)
-        
+
         dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, 0.001)
         df['adx'] = dx.ewm(span=2 * ADX_PERIOD - 1, adjust=False).mean()
+
+        # 5. RSI (对齐回测策略)
+        delta = df['close'].diff()
+        gain = delta.where(delta > 0, 0.0)
+        loss = -delta.where(delta < 0, 0.0)
+        avg_gain = gain.ewm(com=RSI_PERIOD - 1, min_periods=RSI_PERIOD).mean()
+        avg_loss = loss.ewm(com=RSI_PERIOD - 1, min_periods=RSI_PERIOD).mean().replace(0, 0.001)
+        df['rsi'] = 100 - (100 / (1 + avg_gain / avg_loss))
+
+        # 6. ATR SMA — 波动率状态过滤（对齐回测策略）
+        df['atr_sma'] = df['atr'].rolling(window=VOL_FILTER_PERIOD).mean()
 
         return df.iloc[-1]
 
@@ -291,7 +311,8 @@ class LiveSystemV8:
 
             logger.info(f"检查 {symbol:4}: 价格={curr_price:.2f}, "
                        f"EMA10={latest['ema_fast']:.2f}, EMA25={latest['ema_slow']:.2f}, "
-                       f"ADX={latest['adx']:.1f}, ATR={latest['atr']:.2f}, EMA200={latest['ema_trend']:.2f}")
+                       f"RSI={latest['rsi']:.1f}, ADX={latest['adx']:.1f}, "
+                       f"ATR={latest['atr']:.2f}, EMA200={latest['ema_trend']:.2f}")
 
             pos = [p for p in self.ib.positions() if p.contract.symbol == symbol]
 
@@ -365,13 +386,16 @@ class LiveSystemV8:
             # 无持仓：检查入场信号
             # ===========================
             else:
-                # 入场条件
+                # 入场条件（与回测策略对齐）
                 cond_trend = curr_price > latest['ema_trend']
                 cond_cross = latest['ema_fast'] > latest['ema_slow']
-                cond_adx = latest['adx'] > ADX_THRESHOLD
+                cond_adx   = latest['adx'] > ADX_THRESHOLD
+                cond_rsi   = latest['rsi'] < RSI_UPPER
+                cond_vol   = (pd.notna(latest['atr_sma']) and latest['atr_sma'] > 0
+                              and latest['atr'] > latest['atr_sma'] * VOL_FILTER_RATIO)
 
                 if symbol not in self.peak_prices:  # 避免重复入场
-                    if cond_trend and cond_cross and cond_adx:
+                    if cond_trend and cond_cross and cond_adx and cond_rsi and cond_vol:
                         mult = INDEX_MULTIPLIER if symbol in INDICES else 1.0
                         risk_amt = net_liq * RISK_PER_TRADE * mult
                         risk_per_share = max(latest['atr'] * ATR_MULTIPLIER, 0.01)

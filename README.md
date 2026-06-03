@@ -54,16 +54,21 @@ cd AlphaFlow
 
 # 2. 安装依赖（推荐创建虚拟环境）
 python -m venv venv
-venv\Scripts\activate  # Windows
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS / Linux
 pip install -r requirements.txt
 
 # 3. 运行回测（输出汇总表格 + Equity Curve）
 python backtest_main.py
 
-# 4. 实盘交易（需先打开 IBKR TWS/Gateway）
-python ibkr_trading_system_v8.py
+# 4. 参数优化（网格搜索，自动保存最优参数到 optimal_params.yaml）
+python optimize.py
 
-# 5. 自定义参数（编辑 config.yaml）
+# 5. 实盘交易（需先打开 IBKR TWS/Gateway，端口 7497）
+python ibkr_trading_system_v8.py  # 稳定版（日线策略）
+# python ibkr_trading_system_v9.py  # 实验版（日内高频）
+
+# 6. 自定义参数（编辑 config.yaml）
 ```
 
 ---
@@ -118,16 +123,21 @@ cd AlphaFlow
 
 # 2. Install dependencies (recommended: create a venv)
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS / Linux
 pip install -r requirements.txt
 
 # 3. Run backtest (summary table + equity curve)
 python backtest_main.py
 
-# 4. Live trading (requires IBKR TWS/Gateway running)
-python ibkr_trading_system_v8.py
+# 4. Parameter optimization (grid search, saves to optimal_params.yaml)
+python optimize.py
 
-# 5. Customize parameters (edit config.yaml)
+# 5. Live trading (requires IBKR TWS/Gateway on port 7497)
+python ibkr_trading_system_v8.py  # Stable daily strategy
+# python ibkr_trading_system_v9.py  # Experimental intraday
+
+# 6. Customize parameters (edit config.yaml)
 ```
 
 ---
@@ -136,16 +146,22 @@ python ibkr_trading_system_v8.py
 
 ```
 AlphaFlow/
-├── backtest_main.py          # ⭐ 主回测入口（统一入口）
-├── backtest_multi.py         # 旧版（已废弃，保留参考）
-├── backtest_pro.py           # 旧版（已废弃，保留参考）
-├── backtest_v4.0.py          # 旧版（已废弃，保留参考）
-├── ibkr_trading_system_v8.py # 实盘交易系统
-├── ibkr_trading_system_v9.py # 实盘交易系统 v9（experimental）
+├── backtest_main.py          # ⭐ 主回测入口（真实组合回测，60/40 配置）
+├── optimize.py               # 参数优化框架（网格搜索，自动保存最优参数）
+├── ibkr_trading_system_v8.py # ⭐ 实盘交易系统 V8.1（稳定版，推荐使用）
+├── ibkr_trading_system_v9.py # 实盘交易系统 V9（日内高频，experimental）
+├── diagnose.py               # 策略信号诊断工具（排查为什么没有交易信号）
+├── debug_signals.py          # 信号逐一扫描调试脚本
+├── check_data.py             # 数据下载格式检查工具
 ├── test_ibkr.py              # IBKR 连接测试
-├── config.yaml               # 全局参数配置
+├── config.yaml               # 全局参数配置（回测与实盘共用）
 ├── requirements.txt          # Python 依赖
 ├── AlphaFlow-Strategy-Document.md  # 策略详细文档
+├── CHANGELOG.md              # 版本变更日志
+├── archive/                  # 历史版本（已废弃，仅供参考）
+│   ├── backtest_multi.py
+│   ├── backtest_pro.py
+│   └── backtest_v4.0.py
 └── README.md
 ```
 
@@ -160,8 +176,8 @@ AlphaFlow/
 - [x] **V6.0**: 参数配置化管理 / Parameter Optimization via config.yaml
 - [x] **V7.0**: 策略优化（RSI确认 + ADX趋势强度）/ Strategy Optimization
 - [x] **V8.0**: 实盘交易系统 / Live Trading System
-- [ ] **V8.1**: 参数优化框架 + 自动化参数搜索 / Auto Parameter Tuning
-- [ ] **V9.0**: 日内交易模式 + 高频扫描 / Intraday Mode
+- [x] **V8.1**: 参数优化框架 + 自动化参数搜索 / Auto Parameter Tuning
+- [x] **V9.0**: 日内交易模式 + 高频扫描（experimental）/ Intraday Mode (experimental)
 
 ## ⚠️ Disclaimer / 免责声明
 This project is for academic and technical discussion only. It does NOT constitute investment advice. Trading involves significant risk. The author is not responsible for any financial losses incurred from using this software.

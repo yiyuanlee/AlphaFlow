@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+
+# Virtual environments
+.env
+venv/
+.venv/
+env/
+
+# Generated outputs (re-created by running scripts)
+equity_curve.png
+backtest_results.csv
+optimal_params.yaml
+
+# Runtime state files (contain live trading data, must not be committed)
+trading_state.json
+
+# Diagnostic/debug outputs
+diagnosis_output.txt
+check_out.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

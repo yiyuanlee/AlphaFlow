@@ -9,12 +9,14 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
+# asyncio.get_event_loop() is deprecated in Python 3.10+
 try:
-    asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 except RuntimeError:
-    asyncio.set_event_loop(asyncio.new_event_loop())
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
-from ib_insync import *
+from ib_insync import IB, Stock, MarketOrder, ScannerSubscription, TagValue
 import ib_insync.util as util
 import pandas as pd
 import numpy as np
@@ -83,21 +85,26 @@ class HighFreqIntradayV9:
             contract = Stock(symbol, 'SMART', 'USD')
             self.ib.qualifyContracts(contract)
             bars = self.ib.reqHistoricalData(contract, '', '1 D', '1 min', 'ADJUSTED_LAST', True)
-            if not bars: return None
-            
+            if not bars:
+                return None
+
             df = util.df(bars)
-            df['ema_fast'] = df['close'].ewm(span=FAST_EMA).mean()
-            df['ema_slow'] = df['close'].ewm(span=SLOW_EMA).mean()
-            df['vwap'] = (df['volume'] * (df['high'] + df['low'] + df['close'])/3).cumsum() / df['volume'].cumsum()
-            
+            df['ema_fast'] = df['close'].ewm(span=FAST_EMA, adjust=False).mean()
+            df['ema_slow'] = df['close'].ewm(span=SLOW_EMA, adjust=False).mean()
+            cum_vol = df['volume'].cumsum()
+            df['vwap'] = (df['volume'] * (df['high'] + df['low'] + df['close']) / 3).cumsum() / cum_vol
+
             delta = df['close'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=RSI_PERIOD).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=RSI_PERIOD).mean().replace(0, 0.001)
-            df['rsi'] = 100 - (100 / (1 + (gain/loss)))
-            
+            gain = delta.where(delta > 0, 0.0)
+            loss = -delta.where(delta < 0, 0.0)
+            avg_gain = gain.ewm(com=RSI_PERIOD - 1, min_periods=RSI_PERIOD).mean()
+            avg_loss = loss.ewm(com=RSI_PERIOD - 1, min_periods=RSI_PERIOD).mean().replace(0, 0.001)
+            df['rsi'] = 100 - (100 / (1 + avg_gain / avg_loss))
+
             self.indicators[symbol] = df.iloc[-1]
             return self.indicators[symbol]
-        except:
+        except Exception as e:
+            logger.warning(f"[{symbol}] 指标计算失败: {e}")
             return None
 
     def get_dynamic_universe(self):
@@ -172,13 +179,32 @@ class HighFreqIntradayV9:
                     # 2. 获取股票池（低频）
                     self.active_tickers = self.get_dynamic_universe()
                     # 3. 寻找新机会（仅在有空位时）
-                    if len(self.ib.positions()) < MAX_POSITIONS:
+                    held_symbols = {p.contract.symbol for p in self.ib.positions()}
+                    if len(held_symbols) < MAX_POSITIONS:
                         for symbol in self.active_tickers:
-                            if symbol not in [p.contract.symbol for p in self.ib.positions()]:
-                                latest = self.update_indicators(symbol)
-                                if latest and bars: # 简化逻辑...
-                                    # 执行买入 (略，参考 V9.5)
-                                    pass
+                            if symbol in held_symbols:
+                                continue
+                            latest = self.update_indicators(symbol)
+                            if latest is None:
+                                continue
+                            ema_cross = latest['ema_fast'] > latest['ema_slow']
+                            rsi_ok = latest['rsi'] < RSI_ENTRY
+                            above_vwap = latest['close'] > latest['vwap']
+                            if ema_cross and rsi_ok and above_vwap:
+                                curr_price = float(latest['close'])
+                                if curr_price < MIN_PRICE:
+                                    continue
+                                order_val = RISK_PER_TRADE * MAX_DOLLAR_VALUE
+                                size = max(1, int(order_val / curr_price))
+                                size = min(size, MAX_SHARES)
+                                if size * curr_price > MAX_DOLLAR_VALUE:
+                                    size = int(MAX_DOLLAR_VALUE / curr_price)
+                                if size > 0:
+                                    contract = Stock(symbol, 'SMART', 'USD')
+                                    self.ib.qualifyContracts(contract)
+                                    order = MarketOrder('BUY', size)
+                                    self.ib.placeOrder(contract, order)
+                                    logger.info(f"🚀 [{symbol}] V9 入场信号触发，买入 {size} 股 @ ~{curr_price:.2f}")
                 
                 self.ib.sleep(10) # 缩短循环到 10 秒，但内部逻辑更轻量
             except Exception as e:

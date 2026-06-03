@@ -1,5 +1,6 @@
 # AlphaFlow Dependencies
 # ========================
+
 # Core backtesting
 backtrader>=1.9.78
 yfinance>=0.2.0
@@ -9,10 +10,11 @@ matplotlib>=3.7.0
 pyyaml>=6.0
 
 # Live trading (IBKR)
+# Note: ib_insync is in maintenance mode; consider ib_async for long-term migration
 ib_insync>=0.9.0
 pytz>=2024.0
 
-# Optional utilities
-# tqdm>=4.0          # Progress bars for backtest
-# pytest>=7.0         # Unit testing (P2)
-# pytest-asyncio>=0.21  # Async tests
+# Development / testing
+pytest>=7.0
+pytest-asyncio>=0.21
+tqdm>=4.0
