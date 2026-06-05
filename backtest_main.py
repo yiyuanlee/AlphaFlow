@@ -53,8 +53,8 @@ def print_portfolio_summary(res, config):
         print(f'{ticker:<8} ${pnl:>11,.2f} {trades:>8} {win_rate:>8} {flag}')
 
 
-def print_single_ticker_table(rows):
-    print(f"\n【单标的独立回测（各 $10,000 独立资金池）】")
+def print_single_ticker_table(rows, initial_cash: float):
+    print(f"\n【单标的独立回测（各 ${initial_cash:,.0f} 独立资金池）】")
     header = f'{"标的":<8} {"收益率":>8} {"夏普":>6} {"最大回撤":>8} {"交易数":>6} {"胜率":>6}'
     print(header)
     print('-' * 50)
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     print_portfolio_summary(portfolio, config)
 
     singles = run_all_single_ticker_backtests(config, strategy, risk)
-    print_single_ticker_table(singles)
+    print_single_ticker_table(singles, config['backtest']['initial_cash'])
 
     plot_portfolio_equity(portfolio)
     print('\n✅ 回测完成！')

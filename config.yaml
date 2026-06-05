@@ -36,7 +36,7 @@ risk:
   index_multiplier: 3.0   # 指数类标的风险预算乘数
 
 backtest:
-  initial_cash: 10000.0    # 初始资金
+  initial_cash: 50000.0    # 初始资金（量化路线：$50k 组合回测基准）
   commission: 0.001       # 交易佣金 (0.1%)
   start_date: "2010-01-01" # [P0] 延长至 2010，覆盖多个牛熊周期
   end_date: "2026-06-03"

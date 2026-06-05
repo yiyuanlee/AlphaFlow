@@ -7,7 +7,7 @@
 <a name="chinese"></a>
 ## 🇨🇳 中文说明
 
-这是一个基于 Python 开发的自动化量化交易系统，专门针对 **Interactive Brokers (IBKR)** 小额账户（$3,000+）进行优化。
+这是一个基于 Python 开发的自动化量化交易系统，面向 **Interactive Brokers (IBKR)** 账户；当前回测与 Walk-forward 基准资金为 **$50,000**。
 
 ### 📈 项目概览
 AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股市场的趋势跟踪交易。V8.1 完成实盘交易系统，核心重点在于"风险控制"与"波动率自适应"。
@@ -31,36 +31,37 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
    * **指数权重加成**: QQQ/VOO 获得 3 倍风险预算
 
 ### 📊 回测结果（2010-01-01 ~ 2026-06-03）
-**初始资金: $10,000 | 佣金: 0.1% | 标的: config.yaml 中 16 只**
+**初始资金: $50,000 | 佣金: 0.1% | 标的: config.yaml 中 17 只**
 
-**真实组合回测（共享 $10,000 资金池，60/40 配置）**
+**真实组合回测（共享 $50,000 资金池，60/40 配置）**
 
 | 指标 | 数值 |
 |:---:|:---:|
-| **总收益率** | **+70.07%** 🟢 |
-| 结束净值 | $17,007 |
-| 夏普比率 | -0.03 |
-| 最大回撤 | 14.62% |
+| **总收益率** | **+71.57%** 🟢 |
+| 结束净值 | $85,784 |
+| 夏普比率 | -0.02 |
+| 最大回撤 | 14.68% |
 
-**单标的独立回测（各 $10,000 独立资金池，供横向对比）**
+**单标的独立回测（各 $50,000 独立资金池，供横向对比）**
 
 | 标的 | 收益率 | 夏普比率 | 最大回撤 | 交易数 | 胜率 |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| **VOO** | **+39.21%** 🟢 | -0.29 | 14.05% | 19 | 47% |
-| **PLTR** | **+30.50%** 🟢 | 0.03 | 8.33% | 4 | 50% |
-| **QQQ** | **+25.07%** 🟢 | -0.26 | 25.23% | 20 | 30% |
-| NVDA | +12.31% | -0.85 | 15.26% | 12 | 33% |
-| TSLA | +12.07% | -0.90 | 15.95% | 11 | 45% |
-| CVNA | +1.83% | -1.10 | 8.44% | 7 | 14% |
-| NET | +1.80% | -6.36 | 7.31% | 2 | 50% |
+| **VOO** | **+39.71%** 🟢 | -0.28 | 14.16% | 19 | 47% |
+| **PLTR** | **+30.86%** 🟢 | 0.04 | 8.41% | 4 | 50% |
+| **QQQ** | **+25.34%** 🟢 | -0.26 | 25.31% | 20 | 30% |
+| NVDA | +12.25% | -0.85 | 15.40% | 12 | 33% |
+| TSLA | +12.05% | -0.90 | 16.00% | 11 | 45% |
+| XYZ | +2.26% | -8.55 | 7.29% | 4 | 50% |
+| CVNA | +1.84% | -1.08 | 8.53% | 7 | 14% |
+| NET | +1.84% | -6.21 | 7.43% | 2 | 50% |
 | SMCI | +0.74% | -2.87 | 10.20% | 9 | 44% |
-| MSTR | +0.34% | -2.63 | 5.86% | 4 | 50% |
-| MARA | -1.42% | -4.24 | 6.31% | 3 | 33% |
-| CRWD | -2.53% | -1.86 | 10.27% | 6 | 33% |
-| APP | -4.25% | -3.87 | 4.59% | 2 | 0% |
-| AMD | -5.48% | -6.41 | 8.79% | 5 | 0% |
-| SHOP | -14.61% | -1.70 | 17.71% | 8 | 12% |
-| **平均** | **+5.97%** | — | — | — | — |
+| MSTR | +0.17% | -2.61 | 6.04% | 4 | 50% |
+| MARA | -1.38% | -4.04 | 6.57% | 3 | 33% |
+| CRWD | -3.08% | -1.77 | 10.68% | 6 | 33% |
+| APP | -4.97% | -3.31 | 5.36% | 2 | 0% |
+| AMD | -5.55% | -6.35 | 8.85% | 5 | 0% |
+| SHOP | -14.68% | -1.69 | 17.78% | 8 | 12% |
+| **平均** | **+5.73%** | — | — | — | — |
 
 > 📌 组合回测中 PLTR、QQQ、VOO 贡献最大利润；大盘指数 (VOO/QQQ) 在单标的独立回测中依然表现最稳定。运行 `python backtest_main.py` 可复现最新结果。
 
@@ -98,7 +99,7 @@ python ibkr_trading_system_v8.py  # 稳定版（日线策略）
 <a name="english"></a>
 ## 🇺🇸 English Description
 
-An automated quantitative trading system developed in Python, specifically optimized for **Interactive Brokers (IBKR)** small accounts ($3,000+).
+An automated quantitative trading system developed in Python for **Interactive Brokers (IBKR)** accounts; backtest and walk-forward baseline capital is **$50,000**.
 
 ### 📈 Project Overview
 AlphaFlow aims to implement trend-following strategies in the US stock market while maintaining strict risk control. V8.1 features a complete live trading system, focusing on "Risk Management" and "Volatility Adaptation."
@@ -122,36 +123,37 @@ Multiple filters to navigate high-volatility markets:
    * **Index Weight Boost**: QQQ/VOO receive 3x risk allocation
 
 ### 📊 Backtest Results (2010-01-01 ~ 2026-06-03)
-**Initial Capital: $10,000 | Commission: 0.1% | Tickers: 16 from config.yaml**
+**Initial Capital: $50,000 | Commission: 0.1% | Tickers: 17 from config.yaml**
 
-**Portfolio Backtest (shared $10,000 pool, 60/40 allocation)**
+**Portfolio Backtest (shared $50,000 pool, 60/40 allocation)**
 
 | Metric | Value |
 |:---:|:---:|
-| **Total Return** | **+70.07%** 🟢 |
-| Final Value | $17,007 |
-| Sharpe Ratio | -0.03 |
-| Max Drawdown | 14.62% |
+| **Total Return** | **+71.57%** 🟢 |
+| Final Value | $85,784 |
+| Sharpe Ratio | -0.02 |
+| Max Drawdown | 14.68% |
 
-**Single-Ticker Backtest (each $10,000 independent, for comparison)**
+**Single-Ticker Backtest (each $50,000 independent, for comparison)**
 
 | Ticker | Return | Sharpe | Max DD | Trades | Win Rate |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| **VOO** | **+39.21%** 🟢 | -0.29 | 14.05% | 19 | 47% |
-| **PLTR** | **+30.50%** 🟢 | 0.03 | 8.33% | 4 | 50% |
-| **QQQ** | **+25.07%** 🟢 | -0.26 | 25.23% | 20 | 30% |
-| NVDA | +12.31% | -0.85 | 15.26% | 12 | 33% |
-| TSLA | +12.07% | -0.90 | 15.95% | 11 | 45% |
-| CVNA | +1.83% | -1.10 | 8.44% | 7 | 14% |
-| NET | +1.80% | -6.36 | 7.31% | 2 | 50% |
+| **VOO** | **+39.71%** 🟢 | -0.28 | 14.16% | 19 | 47% |
+| **PLTR** | **+30.86%** 🟢 | 0.04 | 8.41% | 4 | 50% |
+| **QQQ** | **+25.34%** 🟢 | -0.26 | 25.31% | 20 | 30% |
+| NVDA | +12.25% | -0.85 | 15.40% | 12 | 33% |
+| TSLA | +12.05% | -0.90 | 16.00% | 11 | 45% |
+| XYZ | +2.26% | -8.55 | 7.29% | 4 | 50% |
+| CVNA | +1.84% | -1.08 | 8.53% | 7 | 14% |
+| NET | +1.84% | -6.21 | 7.43% | 2 | 50% |
 | SMCI | +0.74% | -2.87 | 10.20% | 9 | 44% |
-| MSTR | +0.34% | -2.63 | 5.86% | 4 | 50% |
-| MARA | -1.42% | -4.24 | 6.31% | 3 | 33% |
-| CRWD | -2.53% | -1.86 | 10.27% | 6 | 33% |
-| APP | -4.25% | -3.87 | 4.59% | 2 | 0% |
-| AMD | -5.48% | -6.41 | 8.79% | 5 | 0% |
-| SHOP | -14.61% | -1.70 | 17.71% | 8 | 12% |
-| **Average** | **+5.97%** | — | — | — | — |
+| MSTR | +0.17% | -2.61 | 6.04% | 4 | 50% |
+| MARA | -1.38% | -4.04 | 6.57% | 3 | 33% |
+| CRWD | -3.08% | -1.77 | 10.68% | 6 | 33% |
+| APP | -4.97% | -3.31 | 5.36% | 2 | 0% |
+| AMD | -5.55% | -6.35 | 8.85% | 5 | 0% |
+| SHOP | -14.68% | -1.69 | 17.78% | 8 | 12% |
+| **Average** | **+5.73%** | — | — | — | — |
 
 > 📌 In portfolio mode, PLTR, QQQ, and VOO contributed the most PnL. Run `python backtest_main.py` to reproduce the latest results.
 

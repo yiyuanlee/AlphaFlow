@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.3.1] - 2026-06-03
+
+### Changed
+- **`config.yaml`** — 回测初始资金从 $10,000 提升至 **$50,000**（量化路线基准）
+- **`backtest_main.py`** — 单标的表格资金显示从 config 动态读取
+- **`README.md`** — 同步 $50k 回测结果（组合 +71.57%，净值 $85,784）
+
 ## [8.3.0] - 2026-06-03
 
 ### Added
