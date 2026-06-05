@@ -32,7 +32,8 @@ jobs:
           python -c "from alphaflow.signals import check_entry, check_exit; print('alphaflow.signals OK')"
           python -c "from alphaflow.backtest import run_portfolio_backtest; print('alphaflow.backtest OK')"
           python -c "from alphaflow.walkforward import run_walk_forward; print('alphaflow.walkforward OK')"
+          python -c "from alphaflow.parity import run_parity_check; print('alphaflow.parity OK')"
 
       - name: Run unit tests (skip IBKR live tests)
         run: |
-          pytest --ignore=test_ibkr.py -v || echo "No unit tests found"
+          pytest --ignore=test_ibkr.py -v

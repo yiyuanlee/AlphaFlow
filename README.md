@@ -96,11 +96,14 @@ python optimize.py
 # 5. Walk-Forward 样本外验证（训练→验证→测试，避免过拟合）
 python walk_forward.py --quick
 
-# 6. 实盘交易（需先打开 IBKR TWS/Gateway 模拟盘 7497）
+# 6. 指标对齐验证（Backtrader 回测 vs alphaflow.indicators 实盘，QQQ/VOO 应 100% 通过）
+python verify_indicators.py
+
+# 7. 实盘交易（需先打开 IBKR TWS/Gateway 模拟盘 7497）
 python ibkr_trading_system_v8.py   # 指数池：QQQ/VOO（client_id=1）
 python ibkr_hot_stocks.py          # 个股池：每日热门股（client_id=2）
 
-# 7. 自定义参数（config.yaml → index_tickers / hot_trading）
+# 8. 自定义参数（config.yaml → index_tickers / hot_trading）
 ```
 
 ---
@@ -195,11 +198,14 @@ python optimize.py
 # 5. Walk-forward out-of-sample validation (train → val → test)
 python walk_forward.py --quick
 
-# 6. Live trading (IBKR TWS/Gateway paper port 7497)
+# 6. Indicator parity check (Backtrader backtest vs alphaflow.indicators live; QQQ/VOO should pass 100%)
+python verify_indicators.py
+
+# 7. Live trading (IBKR TWS/Gateway paper port 7497)
 python ibkr_trading_system_v8.py   # Index sleeve: QQQ/VOO
 python ibkr_hot_stocks.py          # Stock sleeve: daily hot tickers
 
-# 7. Customize parameters (config.yaml → index_tickers / hot_trading)
+# 8. Customize parameters (config.yaml → index_tickers / hot_trading)
 ```
 
 ---
@@ -210,7 +216,8 @@ python ibkr_hot_stocks.py          # Stock sleeve: daily hot tickers
 AlphaFlow/
 ├── alphaflow/                # ⭐ 共享策略模块（回测/优化/实盘共用）
 │   ├── config.py             # 配置加载与类型化参数
-│   ├── indicators.py         # 指标计算（EMA/RSI/ADX/ATR）
+│   ├── indicators.py         # 指标计算（与 Backtrader 对齐的 EMA/Wilder）
+│   ├── parity.py             # Backtrader vs 实盘指标对齐检查
 │   ├── signals.py            # 入场/离场/仓位计算逻辑
 │   ├── strategy.py           # Backtrader 策略实现
 │   ├── backtest.py           # 回测引擎
@@ -219,6 +226,8 @@ AlphaFlow/
 │   └── data.py               # 数据下载
 ├── backtest_main.py          # ⭐ 主回测入口（组合 + 单标的）
 ├── walk_forward.py           # ⭐ Walk-Forward 样本外验证
+├── verify_indicators.py      # 指标对齐验证 CLI
+├── tests/                    # pytest（含 test_indicator_parity.py）
 ├── optimize.py               # 参数优化框架（网格搜索）
 ├── ibkr_trading_system_v8.py # ⭐ 指数池实盘（QQQ/VOO，60%资金）
 ├── ibkr_hot_stocks.py        # ⭐ 热门股短线（扫描器，40%资金，≤5天）
