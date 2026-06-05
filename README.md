@@ -29,6 +29,17 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 
 热门股策略不绑定固定个股名单，每 15 分钟扫描 `TOP_PERC_GAIN`，满足 EMA 金叉 + VWAP 上方 + RSI 过滤后入场，到期或止盈/止损离场。
 
+### 📋 标的与资金池说明
+
+| 配置项 | 用途 | 说明 |
+|--------|------|------|
+| `index_tickers` | **V8 实盘** | 固定 QQQ / VOO，占用 `alloc_index` 60% 资金池 |
+| `hot_trading` | **热门股实盘** | IBKR 扫描器动态标的，占用 `alloc_stock` 40% 资金池，最长持仓 5 天 |
+| `tickers` | **历史回测** | 17 只固定名单，仅用于 `backtest_main.py` 组合/单标的回测 |
+| `walk_forward.tickers` | **样本外验证** | 默认 VOO / QQQ，`python walk_forward.py` |
+
+> 热门股策略无法在历史数据上用固定名单回测，上线前请在 **IBKR 模拟盘** 验证扫描器与信号逻辑。
+
 ### 🧠 指数策略逻辑 (V8.1)
 采用多重过滤机制，应对高波动市场：
 1. **趋势过滤**: 仅在价格高于 **200日 EMA** 的牛市环境下入场
@@ -38,6 +49,28 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
    * **ATR 动态移动止盈**: 从最高点回撤 `min(3×ATR, 12%)` 时锁利离场
    * **60/40 资金池**: 指数类 (VOO/QQQ) 最多占 60%，个股最多占 40%
    * **指数权重加成**: QQQ/VOO 获得 3 倍风险预算
+
+### 🔥 热门股策略逻辑 (V9.0)
+
+1. **标的来源**: IBKR `TOP_PERC_GAIN` 扫描器（美股主板，价 ≥ $10，量 ≥ 100 万）
+2. **入场**: EMA 9 金叉 EMA 21 + 价格在 VWAP 上方 + RSI < 70
+3. **离场**: 止盈 5% / 止损 4% / EMA 死叉 / 跌破 VWAP / **满 5 个日历日强制平仓**
+4. **风控**: 最多 5 个仓位，单票不超过个股池 10%，个股池回撤 5% 暂停开仓
+
+### ✅ 指标对齐（回测 ↔ 实盘）
+
+指数策略的实盘信号使用 `alphaflow.indicators`，算法与 Backtrader 默认一致（EMA / Wilder SMMA 均以首期 SMA 为种子）：
+
+| 指标 | 对齐方式 |
+|------|----------|
+| EMA 10 / 25 / 200 | `ema_backtrader()`，α = 2/(period+1) |
+| ATR / RSI / ADX | `wilder_smooth()`，α = 1/period |
+| 金叉信号 | `golden_cross` 布尔值逐日比对 |
+
+```bash
+python verify_indicators.py          # QQQ / VOO 应 100% PASS
+pytest tests/test_indicator_parity.py -v
+```
 
 ### 📊 回测结果（2010-01-01 ~ 2026-06-03）
 **初始资金: $50,000 | 佣金: 0.1% | 标的: config.yaml 中 17 只**
@@ -73,6 +106,17 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 | **平均** | **+5.73%** | — | — | — | — |
 
 > 📌 组合回测中 PLTR、QQQ、VOO 贡献最大利润；大盘指数 (VOO/QQQ) 在单标的独立回测中依然表现最稳定。运行 `python backtest_main.py` 可复现最新结果。
+
+### 📐 Walk-Forward 样本外验证（2024–2026 测试段）
+
+Holdout 模式：训练 2010–2020 → 验证 2021–2023 → 测试 2024–2026（`python walk_forward.py --quick`）
+
+| 标的 | 测试段收益 | 测试段 Sharpe | 测试段最大回撤 | 测试段交易数 | 结论 |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| **QQQ** | **+20.41%** | **0.29** | 2.35% | 1 | ✅ 通过（Sharpe > 0） |
+| VOO | +11.23% | -0.05 | 1.80% | 1 | ❌ 未通过 |
+
+> Walk-forward 表明策略在 QQQ 上样本外表现尚可，VOO 与全组合 Sharpe 仍接近 0。实盘建议从 **模拟盘 + 小资金** 起步，勿直接 unattended 实盘。
 
 ### 🚀 快速开始
 
@@ -131,6 +175,19 @@ AlphaFlow aims to implement trend-following strategies in the US stock market wh
 | **Index trend** | `ibkr_trading_system_v8.py` | 60% | QQQ / VOO | days–months |
 | **Hot momentum** | `ibkr_hot_stocks.py` | 40% | IBKR daily scanner | **≤ 5 days** |
 
+Hot-stock entries use the IBKR `TOP_PERC_GAIN` scanner every 15 minutes; no fixed ticker list.
+
+### 📋 Tickers & Capital Pools
+
+| Config key | Used by | Notes |
+|------------|---------|-------|
+| `index_tickers` | **V8 live** | Fixed QQQ / VOO, `alloc_index` 60% pool |
+| `hot_trading` | **Hot-stock live** | Dynamic scanner universe, `alloc_stock` 40%, max 5-day hold |
+| `tickers` | **Historical backtest** | 17-name fixed list for `backtest_main.py` only |
+| `walk_forward.tickers` | **Out-of-sample test** | Default VOO / QQQ via `walk_forward.py` |
+
+> The hot-stock sleeve cannot be backtested on a fixed list; validate on **IBKR paper trading** first.
+
 ### 🧠 Index Strategy Logic (V8.1)
 Multiple filters to navigate high-volatility markets:
 1. **Trend Filter**: Long positions only when price is above the **200-day EMA**
@@ -140,6 +197,22 @@ Multiple filters to navigate high-volatility markets:
    * **ATR Dynamic Trailing Stop**: Exit at `min(3×ATR, 12%)` drawdown from peak
    * **60/40 Capital Pool**: Indices (VOO/QQQ) capped at 60%, stocks at 40%
    * **Index Weight Boost**: QQQ/VOO receive 3x risk allocation
+
+### 🔥 Hot-Stock Strategy Logic (V9.0)
+
+1. **Universe**: IBKR `TOP_PERC_GAIN` scanner (US major, price ≥ $10, volume ≥ 1M)
+2. **Entry**: EMA 9 golden cross EMA 21 + price above VWAP + RSI < 70
+3. **Exit**: 5% take-profit / 4% stop-loss / EMA death cross / VWAP break / **forced exit after 5 calendar days**
+4. **Risk**: Max 5 positions, 10% per name within stock pool, halt new entries if pool drawdown ≥ 5%
+
+### ✅ Indicator Parity (Backtest ↔ Live)
+
+Live index signals use `alphaflow.indicators`, matched to Backtrader defaults (SMA-seeded EMA / Wilder SMMA):
+
+```bash
+python verify_indicators.py          # QQQ / VOO should show 100% PASS
+pytest tests/test_indicator_parity.py -v
+```
 
 ### 📊 Backtest Results (2010-01-01 ~ 2026-06-03)
 **Initial Capital: $50,000 | Commission: 0.1% | Tickers: 17 from config.yaml**
@@ -175,6 +248,17 @@ Multiple filters to navigate high-volatility markets:
 | **Average** | **+5.73%** | — | — | — | — |
 
 > 📌 In portfolio mode, PLTR, QQQ, and VOO contributed the most PnL. Run `python backtest_main.py` to reproduce the latest results.
+
+### 📐 Walk-Forward Out-of-Sample (2024–2026 test window)
+
+Holdout: train 2010–2020 → validate 2021–2023 → test 2024–2026 (`python walk_forward.py --quick`)
+
+| Ticker | Test Return | Test Sharpe | Test Max DD | Test Trades | Verdict |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| **QQQ** | **+20.41%** | **0.29** | 2.35% | 1 | ✅ Pass (Sharpe > 0) |
+| VOO | +11.23% | -0.05 | 1.80% | 1 | ❌ Fail |
+
+> Walk-forward suggests modest edge on QQQ only; portfolio Sharpe remains near zero. Start with **paper trading** before live capital.
 
 ### 🚀 Quick Start
 
@@ -223,6 +307,10 @@ AlphaFlow/
 │   ├── backtest.py           # 回测引擎
 │   ├── grid.py               # 参数网格搜索
 │   ├── walkforward.py        # Walk-Forward 验证核心
+│   ├── hot_config.py         # 热门股策略配置
+│   ├── hot_indicators.py     # 热门股日内指标（EMA/VWAP/RSI）
+│   ├── hot_signals.py        # 热门股入场/离场信号
+│   ├── scanner.py            # IBKR 扫描器封装
 │   └── data.py               # 数据下载
 ├── backtest_main.py          # ⭐ 主回测入口（组合 + 单标的）
 ├── walk_forward.py           # ⭐ Walk-Forward 样本外验证
@@ -257,6 +345,7 @@ AlphaFlow/
 - [x] **V8.0**: 实盘交易系统 / Live Trading System
 - [x] **V8.1**: 参数优化框架 + 自动化参数搜索 / Auto Parameter Tuning
 - [x] **V9.0**: 热门股短线策略（扫描器动态标的，≤5天持仓）/ Hot-Stock Momentum Sleeve
+- [x] **V9.1**: 指标对齐验证（Backtrader ↔ alphaflow.indicators，QQQ/VOO 100%）/ Indicator Parity Checks
 
 ## ⚠️ Disclaimer / 免责声明
 This project is for academic and technical discussion only. It does NOT constitute investment advice. Trading involves significant risk. The author is not responsible for any financial losses incurred from using this software.
