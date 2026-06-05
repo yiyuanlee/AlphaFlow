@@ -21,6 +21,7 @@ walkforward_results.yaml
 
 # Runtime state files (contain live trading data, must not be committed)
 trading_state.json
+hot_trading_state.json
 
 # Diagnostic/debug outputs
 diagnosis_output.txt

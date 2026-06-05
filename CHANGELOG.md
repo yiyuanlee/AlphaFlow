@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.0.0] - 2026-06-03
+
+### Added
+- **`ibkr_hot_stocks.py`** — 热门股短线策略：IBKR 扫描器动态标的、个股池 40%、最长持仓 5 天
+- **`alphaflow/hot_config.py`**, **`hot_signals.py`**, **`hot_indicators.py`**, **`scanner.py`**
+- **`config.yaml`** — `index_tickers`（V8）与 `hot_trading`（扫描/持仓/风控）配置段
+
+### Changed
+- **`ibkr_trading_system_v8.py`** — 仅交易 `index_tickers`（QQQ/VOO），专注指数资金池
+- **`ibkr_trading_system_v9.py`** — 重定向至 `ibkr_hot_stocks.py`
+
 ## [8.3.1] - 2026-06-03
 
 ### Changed

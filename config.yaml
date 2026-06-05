@@ -44,8 +44,46 @@ backtest:
 live:
   tws_host: "127.0.0.1"
   tws_port: 7497
-  client_id: 1
+  client_id: 1          # V8 指数策略
   scan_interval_seconds: 3600
+
+# 指数日线策略标的（V8，使用 alloc_index 60% 资金池）
+index_tickers:
+  - "QQQ"
+  - "VOO"
+
+# 热门股短线策略（ibkr_hot_stocks.py，使用 alloc_stock 40% 资金池）
+hot_trading:
+  client_id: 2          # 与 V8 区分，避免 TWS 客户端 ID 冲突
+  loop_seconds: 60
+  exclude_symbols: ["VOO", "QQQ", "SPY", "IWM"]
+  scanner:
+    scan_code: "TOP_PERC_GAIN"      # 当日涨幅榜
+    location_code: "STK.US.MAJOR"
+    min_price: 10.0
+    min_volume: 1000000
+    max_results: 15
+    rescan_minutes: 15
+  position:
+    max_hold_days: 5                 # 最长持仓 5 个日历日
+    max_positions: 5
+    max_single_position_pct: 0.10    # 单票不超过个股池 10%
+  entry:
+    fast_ema: 9
+    slow_ema: 21
+    rsi_period: 14
+    rsi_max: 70
+    require_above_vwap: true
+  exit:
+    take_profit_pct: 0.05
+    stop_loss_pct: 0.04
+    use_ema_cross: true
+    use_vwap_break: true
+    force_exit_on_max_hold: true
+  risk:
+    stock_pool_pct: 0.40             # 与 risk.alloc_stock 对齐
+    risk_per_trade: 0.02
+    pool_drawdown_halt_pct: 0.05
 
 # Walk-Forward 样本外验证（用法: python walk_forward.py）
 walk_forward:
@@ -71,7 +109,7 @@ walk_forward:
     data_start: "2010-01-01"
     data_end: "2026-06-03"
 
-# 回测标的列表
+# 历史回测固定标的列表（热门股动态策略需模拟盘验证，无法用固定名单回测）
 tickers:
   - "QQQ"
   - "VOO"

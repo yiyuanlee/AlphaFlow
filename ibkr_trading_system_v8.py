@@ -44,7 +44,10 @@ TWS_HOST = config['live'].get('tws_host', '127.0.0.1') if config else '127.0.0.1
 TWS_PORT = config['live'].get('tws_port', 7497) if config else 7497
 CLIENT_ID = config['live'].get('client_id', 1) if config else 1
 SCAN_INTERVAL = config['live'].get('scan_interval_seconds', 3600) if config else 3600
-TICKERS = config.get('tickers', ['QQQ', 'VOO']) if config else ['QQQ', 'VOO']
+if config and config.get('index_tickers'):
+    TICKERS = config['index_tickers']
+else:
+    TICKERS = ['QQQ', 'VOO']
 ORDER_TIMEOUT = 10
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', stream=sys.stdout)

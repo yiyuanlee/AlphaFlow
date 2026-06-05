@@ -20,7 +20,16 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 * **实盘对接**: IBKR API (ib_insync) ✅ 已实现
 * **配置文件**: config.yaml（参数集中管理）
 
-### 🧠 策略逻辑 (V8.1)
+### 🧠 双策略架构（指数 + 热门股）
+
+| 策略 | 脚本 | 资金池 | 标的来源 | 持仓周期 |
+|------|------|--------|---------|---------|
+| **指数趋势** | `ibkr_trading_system_v8.py` | 60% (`alloc_index`) | 固定 QQQ / VOO | 数日~数月 |
+| **热门股短线** | `ibkr_hot_stocks.py` | 40% (`alloc_stock`) | IBKR 扫描器每日涨幅榜 | **≤ 5 天** |
+
+热门股策略不绑定固定个股名单，每 15 分钟扫描 `TOP_PERC_GAIN`，满足 EMA 金叉 + VWAP 上方 + RSI 过滤后入场，到期或止盈/止损离场。
+
+### 🧠 指数策略逻辑 (V8.1)
 采用多重过滤机制，应对高波动市场：
 1. **趋势过滤**: 仅在价格高于 **200日 EMA** 的牛市环境下入场
 2. **入场信号**: EMA 10 金叉 EMA 25，同时 **RSI < 65**、**ADX > 20**、**ATR > ATR均值 × 0.8**（波动率状态确认）
@@ -87,11 +96,11 @@ python optimize.py
 # 5. Walk-Forward 样本外验证（训练→验证→测试，避免过拟合）
 python walk_forward.py --quick
 
-# 6. 实盘交易（需先打开 IBKR TWS/Gateway，端口 7497）
-python ibkr_trading_system_v8.py  # 稳定版（日线策略）
-# python ibkr_trading_system_v9.py  # 实验版（日内高频）
+# 6. 实盘交易（需先打开 IBKR TWS/Gateway 模拟盘 7497）
+python ibkr_trading_system_v8.py   # 指数池：QQQ/VOO（client_id=1）
+python ibkr_hot_stocks.py          # 个股池：每日热门股（client_id=2）
 
-# 7. 自定义参数（编辑 config.yaml、walk_forward 分段）
+# 7. 自定义参数（config.yaml → index_tickers / hot_trading）
 ```
 
 ---
@@ -112,7 +121,14 @@ AlphaFlow aims to implement trend-following strategies in the US stock market wh
 * **Live Trading**: IBKR API (ib_insync) ✅
 * **Config**: config.yaml (centralized parameters)
 
-### 🧠 Strategy Logic (V8.1)
+### 🧠 Dual-Strategy Architecture (Index + Hot Stocks)
+
+| Strategy | Script | Capital Pool | Universe | Max Hold |
+|----------|--------|--------------|----------|----------|
+| **Index trend** | `ibkr_trading_system_v8.py` | 60% | QQQ / VOO | days–months |
+| **Hot momentum** | `ibkr_hot_stocks.py` | 40% | IBKR daily scanner | **≤ 5 days** |
+
+### 🧠 Index Strategy Logic (V8.1)
 Multiple filters to navigate high-volatility markets:
 1. **Trend Filter**: Long positions only when price is above the **200-day EMA**
 2. **Entry Signal**: EMA 10 golden cross EMA 25, with **RSI < 65**, **ADX > 20**, and **ATR > ATR-SMA × 0.8**
@@ -179,11 +195,11 @@ python optimize.py
 # 5. Walk-forward out-of-sample validation (train → val → test)
 python walk_forward.py --quick
 
-# 6. Live trading (requires IBKR TWS/Gateway on port 7497)
-python ibkr_trading_system_v8.py  # Stable daily strategy
-# python ibkr_trading_system_v9.py  # Experimental intraday
+# 6. Live trading (IBKR TWS/Gateway paper port 7497)
+python ibkr_trading_system_v8.py   # Index sleeve: QQQ/VOO
+python ibkr_hot_stocks.py          # Stock sleeve: daily hot tickers
 
-# 7. Customize parameters (edit config.yaml, walk_forward windows)
+# 7. Customize parameters (config.yaml → index_tickers / hot_trading)
 ```
 
 ---
@@ -204,8 +220,9 @@ AlphaFlow/
 ├── backtest_main.py          # ⭐ 主回测入口（组合 + 单标的）
 ├── walk_forward.py           # ⭐ Walk-Forward 样本外验证
 ├── optimize.py               # 参数优化框架（网格搜索）
-├── ibkr_trading_system_v8.py # ⭐ 实盘交易系统 V8.1（稳定版）
-├── ibkr_trading_system_v9.py # 实盘 V9（日内高频，experimental）
+├── ibkr_trading_system_v8.py # ⭐ 指数池实盘（QQQ/VOO，60%资金）
+├── ibkr_hot_stocks.py        # ⭐ 热门股短线（扫描器，40%资金，≤5天）
+├── ibkr_trading_system_v9.py # 兼容入口 → ibkr_hot_stocks.py
 ├── diagnose.py               # 策略信号诊断工具
 ├── debug_signals.py          # 信号逐一扫描调试脚本
 ├── check_data.py             # 数据下载格式检查工具
@@ -230,7 +247,7 @@ AlphaFlow/
 - [x] **V7.0**: 策略优化（RSI确认 + ADX趋势强度）/ Strategy Optimization
 - [x] **V8.0**: 实盘交易系统 / Live Trading System
 - [x] **V8.1**: 参数优化框架 + 自动化参数搜索 / Auto Parameter Tuning
-- [x] **V9.0**: 日内交易模式 + 高频扫描（experimental）/ Intraday Mode (experimental)
+- [x] **V9.0**: 热门股短线策略（扫描器动态标的，≤5天持仓）/ Hot-Stock Momentum Sleeve
 
 ## ⚠️ Disclaimer / 免责声明
 This project is for academic and technical discussion only. It does NOT constitute investment advice. Trading involves significant risk. The author is not responsible for any financial losses incurred from using this software.
