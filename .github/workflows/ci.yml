@@ -36,4 +36,4 @@ jobs:
 
       - name: Run unit tests (skip IBKR live tests)
         run: |
-          pytest --ignore=test_ibkr.py -v
+          pytest --ignore=scripts/debug/test_ibkr.py -v

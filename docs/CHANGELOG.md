@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.2.0] - 2026-06-06
+
+### Changed
+- **项目目录整理** — 入口脚本迁入 `scripts/`，实盘迁入 `scripts/live/`，调试工具迁入 `scripts/debug/`
+- **文档** — `CHANGELOG.md`、`AlphaFlow-Strategy-Document.md` 移至 `docs/`
+- **生成物与状态** — 回测输出写入 `output/`，实盘 JSON 写入 `state/`（`alphaflow.config` 统一路径）
+- **`README.md`** — 更新快速开始命令与文件结构说明
+
 ## [9.0.0] - 2026-06-03
 
 ### Added

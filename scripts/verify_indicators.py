@@ -4,8 +4,8 @@ AlphaFlow - 指标对齐验证
 对比 Backtrader（回测）与 alphaflow.indicators（实盘）在相同 OHLCV 上的计算结果。
 
 用法:
-  python verify_indicators.py
-  python verify_indicators.py --ticker QQQ --ticker VOO
+  python scripts/verify_indicators.py
+  python scripts/verify_indicators.py --ticker QQQ --ticker VOO
 """
 
 from __future__ import annotations
@@ -13,6 +13,10 @@ from __future__ import annotations
 import argparse
 import sys
 import io
+
+from _bootstrap import setup_path
+
+setup_path(__file__)
 
 from alphaflow.config import load_config
 from alphaflow.parity import run_parity_check

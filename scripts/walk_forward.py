@@ -4,9 +4,9 @@ AlphaFlow - Walk-Forward 样本外验证
 训练集优化 → 验证集选参 → 测试集一次性评估（避免过拟合）
 
 用法:
-  python walk_forward.py              # 默认 holdout 模式
-  python walk_forward.py --rolling    # 滚动 walk-forward
-  python walk_forward.py --quick      # 使用较小参数网格（更快）
+  python scripts/walk_forward.py              # 默认 holdout 模式
+  python scripts/walk_forward.py --rolling    # 滚动 walk-forward
+  python scripts/walk_forward.py --quick      # 使用较小参数网格（更快）
 
 流程 (holdout):
   1. 在训练集 (2010-2020) 上网格搜索
@@ -18,7 +18,11 @@ import argparse
 import sys
 import io
 
-from alphaflow.config import load_config
+from _bootstrap import setup_path
+
+setup_path(__file__)
+
+from alphaflow.config import load_config, output_path
 from alphaflow.walkforward import (
     print_walk_forward_summary,
     run_walk_forward,
@@ -33,7 +37,11 @@ def main():
     parser.add_argument('--rolling', action='store_true', help='Use rolling walk-forward windows')
     parser.add_argument('--quick', action='store_true', help='Use smaller parameter grid for faster runs')
     parser.add_argument('--portfolio', action='store_true', help='Portfolio-scope holdout (shared capital pool)')
-    parser.add_argument('--output', default='walkforward_results.yaml', help='Output YAML path')
+    parser.add_argument(
+        '--output',
+        default=str(output_path('walkforward_results.yaml')),
+        help='Output YAML path',
+    )
     args = parser.parse_args()
 
     config = load_config()

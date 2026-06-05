@@ -1,6 +1,16 @@
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _bootstrap import setup_path
+
+setup_path(__file__)
+
 import yfinance as yf
 import pandas as pd
 import numpy as np
+
+from alphaflow.config import output_path
 
 out = []
 
@@ -105,7 +115,7 @@ for ticker in ['VOO', 'QQQ']:
     if 'Adj Close' in df_noadj.columns:
         log(f"  auto_adjust=False last AdjClose: {df_noadj['Adj Close'].iloc[-1]:.4f}")
 
-with open('diagnosis_output.txt', 'w', encoding='utf-8') as f:
+with open(output_path('diagnosis_output.txt'), 'w', encoding='utf-8') as f:
     f.write('\n'.join(out))
     
-print("DONE - see diagnosis_output.txt")
+print("DONE - see output/diagnosis_output.txt")

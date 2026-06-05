@@ -24,8 +24,8 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 
 | 策略 | 脚本 | 资金池 | 标的来源 | 持仓周期 |
 |------|------|--------|---------|---------|
-| **指数趋势** | `ibkr_trading_system_v8.py` | 60% (`alloc_index`) | 固定 QQQ / VOO | 数日~数月 |
-| **热门股短线** | `ibkr_hot_stocks.py` | 40% (`alloc_stock`) | IBKR 扫描器每日涨幅榜 | **≤ 5 天** |
+| **指数趋势** | `scripts/live/ibkr_trading_system_v8.py` | 60% (`alloc_index`) | 固定 QQQ / VOO | 数日~数月 |
+| **热门股短线** | `scripts/live/ibkr_hot_stocks.py` | 40% (`alloc_stock`) | IBKR 扫描器每日涨幅榜 | **≤ 5 天** |
 
 热门股策略不绑定固定个股名单，每 15 分钟扫描 `TOP_PERC_GAIN`，满足 EMA 金叉 + VWAP 上方 + RSI 过滤后入场，到期或止盈/止损离场。
 
@@ -35,8 +35,8 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 |--------|------|------|
 | `index_tickers` | **V8 实盘** | 固定 QQQ / VOO，占用 `alloc_index` 60% 资金池 |
 | `hot_trading` | **热门股实盘** | IBKR 扫描器动态标的，占用 `alloc_stock` 40% 资金池，最长持仓 5 天 |
-| `tickers` | **历史回测** | 17 只固定名单，仅用于 `backtest_main.py` 组合/单标的回测 |
-| `walk_forward.tickers` | **样本外验证** | 默认 VOO / QQQ，`python walk_forward.py` |
+| `tickers` | **历史回测** | 17 只固定名单，仅用于 `scripts/backtest_main.py` 组合/单标的回测 |
+| `walk_forward.tickers` | **样本外验证** | 默认 VOO / QQQ，`python scripts/walk_forward.py` |
 
 > 热门股策略无法在历史数据上用固定名单回测，上线前请在 **IBKR 模拟盘** 验证扫描器与信号逻辑。
 
@@ -68,7 +68,7 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 | 金叉信号 | `golden_cross` 布尔值逐日比对 |
 
 ```bash
-python verify_indicators.py          # QQQ / VOO 应 100% PASS
+python scripts/verify_indicators.py  # QQQ / VOO 应 100% PASS
 pytest tests/test_indicator_parity.py -v
 ```
 
@@ -105,11 +105,11 @@ pytest tests/test_indicator_parity.py -v
 | SHOP | -14.68% | -1.69 | 17.78% | 8 | 12% |
 | **平均** | **+5.73%** | — | — | — | — |
 
-> 📌 组合回测中 PLTR、QQQ、VOO 贡献最大利润；大盘指数 (VOO/QQQ) 在单标的独立回测中依然表现最稳定。运行 `python backtest_main.py` 可复现最新结果。
+> 📌 组合回测中 PLTR、QQQ、VOO 贡献最大利润；大盘指数 (VOO/QQQ) 在单标的独立回测中依然表现最稳定。运行 `python scripts/backtest_main.py` 可复现最新结果；图表与结果文件写入 `output/`。
 
 ### 📐 Walk-Forward 样本外验证（2024–2026 测试段）
 
-Holdout 模式：训练 2010–2020 → 验证 2021–2023 → 测试 2024–2026（`python walk_forward.py --quick`）
+Holdout 模式：训练 2010–2020 → 验证 2021–2023 → 测试 2024–2026（`python scripts/walk_forward.py --quick`）
 
 | 标的 | 测试段收益 | 测试段 Sharpe | 测试段最大回撤 | 测试段交易数 | 结论 |
 |:---:|:---:|:---:|:---:|:---:|:---:|
@@ -131,21 +131,21 @@ venv\Scripts\activate        # Windows
 # source venv/bin/activate   # macOS / Linux
 pip install -r requirements.txt
 
-# 3. 运行回测（输出汇总表格 + Equity Curve）
-python backtest_main.py
+# 3. 运行回测（输出汇总表格 + output/equity_curve.png）
+python scripts/backtest_main.py
 
-# 4. 参数优化（网格搜索，自动保存最优参数到 optimal_params.yaml）
-python optimize.py
+# 4. 参数优化（网格搜索，结果保存至 output/optimal_params.yaml）
+python scripts/optimize.py
 
 # 5. Walk-Forward 样本外验证（训练→验证→测试，避免过拟合）
-python walk_forward.py --quick
+python scripts/walk_forward.py --quick
 
 # 6. 指标对齐验证（Backtrader 回测 vs alphaflow.indicators 实盘，QQQ/VOO 应 100% 通过）
-python verify_indicators.py
+python scripts/verify_indicators.py
 
 # 7. 实盘交易（需先打开 IBKR TWS/Gateway 模拟盘 7497）
-python ibkr_trading_system_v8.py   # 指数池：QQQ/VOO（client_id=1）
-python ibkr_hot_stocks.py          # 个股池：每日热门股（client_id=2）
+python scripts/live/ibkr_trading_system_v8.py   # 指数池：QQQ/VOO（client_id=1）
+python scripts/live/ibkr_hot_stocks.py          # 个股池：每日热门股（client_id=2）
 
 # 8. 自定义参数（config.yaml → index_tickers / hot_trading）
 ```
@@ -172,8 +172,8 @@ AlphaFlow aims to implement trend-following strategies in the US stock market wh
 
 | Strategy | Script | Capital Pool | Universe | Max Hold |
 |----------|--------|--------------|----------|----------|
-| **Index trend** | `ibkr_trading_system_v8.py` | 60% | QQQ / VOO | days–months |
-| **Hot momentum** | `ibkr_hot_stocks.py` | 40% | IBKR daily scanner | **≤ 5 days** |
+| **Index trend** | `scripts/live/ibkr_trading_system_v8.py` | 60% | QQQ / VOO | days–months |
+| **Hot momentum** | `scripts/live/ibkr_hot_stocks.py` | 40% | IBKR daily scanner | **≤ 5 days** |
 
 Hot-stock entries use the IBKR `TOP_PERC_GAIN` scanner every 15 minutes; no fixed ticker list.
 
@@ -183,8 +183,8 @@ Hot-stock entries use the IBKR `TOP_PERC_GAIN` scanner every 15 minutes; no fixe
 |------------|---------|-------|
 | `index_tickers` | **V8 live** | Fixed QQQ / VOO, `alloc_index` 60% pool |
 | `hot_trading` | **Hot-stock live** | Dynamic scanner universe, `alloc_stock` 40%, max 5-day hold |
-| `tickers` | **Historical backtest** | 17-name fixed list for `backtest_main.py` only |
-| `walk_forward.tickers` | **Out-of-sample test** | Default VOO / QQQ via `walk_forward.py` |
+| `tickers` | **Historical backtest** | 17-name fixed list for `scripts/backtest_main.py` only |
+| `walk_forward.tickers` | **Out-of-sample test** | Default VOO / QQQ via `scripts/walk_forward.py` |
 
 > The hot-stock sleeve cannot be backtested on a fixed list; validate on **IBKR paper trading** first.
 
@@ -210,7 +210,7 @@ Multiple filters to navigate high-volatility markets:
 Live index signals use `alphaflow.indicators`, matched to Backtrader defaults (SMA-seeded EMA / Wilder SMMA):
 
 ```bash
-python verify_indicators.py          # QQQ / VOO should show 100% PASS
+python scripts/verify_indicators.py  # QQQ / VOO should show 100% PASS
 pytest tests/test_indicator_parity.py -v
 ```
 
@@ -247,11 +247,11 @@ pytest tests/test_indicator_parity.py -v
 | SHOP | -14.68% | -1.69 | 17.78% | 8 | 12% |
 | **Average** | **+5.73%** | — | — | — | — |
 
-> 📌 In portfolio mode, PLTR, QQQ, and VOO contributed the most PnL. Run `python backtest_main.py` to reproduce the latest results.
+> 📌 In portfolio mode, PLTR, QQQ, and VOO contributed the most PnL. Run `python scripts/backtest_main.py` to reproduce; artifacts go to `output/`.
 
 ### 📐 Walk-Forward Out-of-Sample (2024–2026 test window)
 
-Holdout: train 2010–2020 → validate 2021–2023 → test 2024–2026 (`python walk_forward.py --quick`)
+Holdout: train 2010–2020 → validate 2021–2023 → test 2024–2026 (`python scripts/walk_forward.py --quick`)
 
 | Ticker | Test Return | Test Sharpe | Test Max DD | Test Trades | Verdict |
 |:---:|:---:|:---:|:---:|:---:|:---:|
@@ -273,21 +273,21 @@ venv\Scripts\activate        # Windows
 # source venv/bin/activate   # macOS / Linux
 pip install -r requirements.txt
 
-# 3. Run backtest (summary table + equity curve)
-python backtest_main.py
+# 3. Run backtest (summary table + output/equity_curve.png)
+python scripts/backtest_main.py
 
-# 4. Parameter optimization (grid search, saves to optimal_params.yaml)
-python optimize.py
+# 4. Parameter optimization (grid search, saves to output/optimal_params.yaml)
+python scripts/optimize.py
 
 # 5. Walk-forward out-of-sample validation (train → val → test)
-python walk_forward.py --quick
+python scripts/walk_forward.py --quick
 
 # 6. Indicator parity check (Backtrader backtest vs alphaflow.indicators live; QQQ/VOO should pass 100%)
-python verify_indicators.py
+python scripts/verify_indicators.py
 
 # 7. Live trading (IBKR TWS/Gateway paper port 7497)
-python ibkr_trading_system_v8.py   # Index sleeve: QQQ/VOO
-python ibkr_hot_stocks.py          # Stock sleeve: daily hot tickers
+python scripts/live/ibkr_trading_system_v8.py   # Index sleeve: QQQ/VOO
+python scripts/live/ibkr_hot_stocks.py          # Stock sleeve: daily hot tickers
 
 # 8. Customize parameters (config.yaml → index_tickers / hot_trading)
 ```
@@ -298,37 +298,39 @@ python ibkr_hot_stocks.py          # Stock sleeve: daily hot tickers
 
 ```
 AlphaFlow/
-├── alphaflow/                # ⭐ 共享策略模块（回测/优化/实盘共用）
-│   ├── config.py             # 配置加载与类型化参数
-│   ├── indicators.py         # 指标计算（与 Backtrader 对齐的 EMA/Wilder）
-│   ├── parity.py             # Backtrader vs 实盘指标对齐检查
-│   ├── signals.py            # 入场/离场/仓位计算逻辑
+├── alphaflow/                # ⭐ 共享策略库（回测/优化/实盘共用）
+│   ├── config.py             # 配置加载、项目路径（output/ state/）
+│   ├── indicators.py         # 指标计算（与 Backtrader 对齐）
+│   ├── parity.py             # 指标对齐检查
+│   ├── signals.py            # 指数策略入场/离场/仓位
 │   ├── strategy.py           # Backtrader 策略实现
 │   ├── backtest.py           # 回测引擎
-│   ├── grid.py               # 参数网格搜索
-│   ├── walkforward.py        # Walk-Forward 验证核心
-│   ├── hot_config.py         # 热门股策略配置
-│   ├── hot_indicators.py     # 热门股日内指标（EMA/VWAP/RSI）
-│   ├── hot_signals.py        # 热门股入场/离场信号
-│   ├── scanner.py            # IBKR 扫描器封装
+│   ├── walkforward.py        # Walk-Forward 核心
+│   ├── hot_*.py / scanner.py # 热门股策略模块
 │   └── data.py               # 数据下载
-├── backtest_main.py          # ⭐ 主回测入口（组合 + 单标的）
-├── walk_forward.py           # ⭐ Walk-Forward 样本外验证
-├── verify_indicators.py      # 指标对齐验证 CLI
+├── scripts/                  # 可执行入口脚本
+│   ├── backtest_main.py      # ⭐ 组合 + 单标的回测
+│   ├── optimize.py           # 参数网格搜索
+│   ├── walk_forward.py       # Walk-Forward 验证
+│   ├── verify_indicators.py  # 指标对齐验证
+│   ├── live/                 # IBKR 实盘
+│   │   ├── ibkr_trading_system_v8.py  # 指数池 QQQ/VOO
+│   │   ├── ibkr_hot_stocks.py         # 热门股池
+│   │   └── ibkr_trading_system_v9.py  # V9 兼容入口
+│   └── debug/                # 诊断与连接测试
+│       ├── diagnose.py
+│       ├── debug_signals.py
+│       ├── check_data.py
+│       └── test_ibkr.py
 ├── tests/                    # pytest（含 test_indicator_parity.py）
-├── optimize.py               # 参数优化框架（网格搜索）
-├── ibkr_trading_system_v8.py # ⭐ 指数池实盘（QQQ/VOO，60%资金）
-├── ibkr_hot_stocks.py        # ⭐ 热门股短线（扫描器，40%资金，≤5天）
-├── ibkr_trading_system_v9.py # 兼容入口 → ibkr_hot_stocks.py
-├── diagnose.py               # 策略信号诊断工具
-├── debug_signals.py          # 信号逐一扫描调试脚本
-├── check_data.py             # 数据下载格式检查工具
-├── test_ibkr.py              # IBKR 连接测试
+├── docs/                     # 文档
+│   ├── CHANGELOG.md
+│   └── AlphaFlow-Strategy-Document.md
+├── output/                   # 生成物（回测图、CSV、YAML，已 gitignore）
+├── state/                    # 实盘运行时状态 JSON（已 gitignore）
+├── archive/                  # 历史废弃脚本
 ├── config.yaml               # 全局参数配置
-├── requirements.txt          # Python 依赖
-├── AlphaFlow-Strategy-Document.md
-├── CHANGELOG.md
-├── archive/                  # 历史版本（已废弃）
+├── requirements.txt
 └── README.md
 ```
 

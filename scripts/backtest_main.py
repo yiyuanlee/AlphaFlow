@@ -3,21 +3,23 @@ AlphaFlow - 真实组合回测入口
 ===========================
 所有标的在同一个资金池中共同交易，相互竞争资金。
 资金分配规则：60% 资金上限用于指数类 (VOO, QQQ)，40% 资金上限用于个股类。
-用法: python backtest_main.py
+用法: python scripts/backtest_main.py
 """
 
 import sys
 import io
+
+from _bootstrap import setup_path
+
+setup_path(__file__)
 
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import numpy as np
-from pathlib import Path
-
 from alphaflow.backtest import run_all_single_ticker_backtests, run_portfolio_backtest
-from alphaflow.config import load_config, params_from_config
+from alphaflow.config import load_config, output_path, params_from_config
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
@@ -102,7 +104,7 @@ def plot_portfolio_equity(res):
         spine.set_edgecolor('#333')
 
     plt.tight_layout()
-    out_path = Path('equity_curve.png')
+    out_path = output_path('equity_curve.png')
     plt.savefig(out_path, dpi=150, bbox_inches='tight', facecolor=BG, edgecolor='none')
     plt.close()
     print(f'\n📈 Equity Curve 已保存: {out_path.resolve()}')

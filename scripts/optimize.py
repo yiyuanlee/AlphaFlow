@@ -2,19 +2,23 @@
 AlphaFlow - 参数优化框架
 ===========================
 网格搜索，自动寻找最优参数组合。
-用法: python optimize.py
+用法: python scripts/optimize.py
 """
 
 import sys
 import io
 import itertools
+
+from _bootstrap import setup_path
+
+setup_path(__file__)
 from datetime import datetime
 from pathlib import Path
 
 import backtrader as bt
 import yaml
 
-from alphaflow.config import load_config, params_from_config, strategy_params_to_bt
+from alphaflow.config import load_config, output_path, params_from_config, strategy_params_to_bt
 from alphaflow.data import fetch_data
 from alphaflow.strategy import AlphaFlowStrategy
 
@@ -104,10 +108,11 @@ def print_top_results(results, top_n=10):
     return best
 
 
-def save_optimal_params(best_params, ticker, output_path='optimal_params.yaml'):
+def save_optimal_params(best_params, ticker, outfile: str | Path | None = None):
+    path = Path(outfile) if outfile is not None else output_path('optimal_params.yaml')
     existing = {}
-    if Path(output_path).exists():
-        with open(output_path, 'r', encoding='utf-8') as f:
+    if path.exists():
+        with open(path, 'r', encoding='utf-8') as f:
             existing = yaml.safe_load(f) or {}
 
     existing[ticker] = {
@@ -117,10 +122,10 @@ def save_optimal_params(best_params, ticker, output_path='optimal_params.yaml'):
         'optimized_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     }
 
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(path, 'w', encoding='utf-8') as f:
         yaml.dump(existing, f, allow_unicode=True, default_flow_style=False)
 
-    print(f'\n💾 最优参数已保存: {output_path}')
+    print(f'\n💾 最优参数已保存: {path}')
 
 
 if __name__ == '__main__':
@@ -142,4 +147,4 @@ if __name__ == '__main__':
         print()
 
     print('✅ 参数优化完成！')
-    print('📖 查看 optimal_params.yaml 获取各标的最优参数')
+    print('📖 查看 output/optimal_params.yaml 获取各标的最优参数')

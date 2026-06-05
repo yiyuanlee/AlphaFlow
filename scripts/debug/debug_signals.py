@@ -9,14 +9,16 @@ import pandas as pd
 import numpy as np
 import sys
 import io
-import yaml
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _bootstrap import setup_path
+
+setup_path(__file__)
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-
-def load_config():
-    with open('config.yaml', 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+from alphaflow.config import load_config
 
 
 def diagnose_ticker(ticker, config):

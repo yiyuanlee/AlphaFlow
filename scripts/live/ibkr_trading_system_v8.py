@@ -3,7 +3,7 @@ AlphaFlow - 实盘交易系统 V8.1
 ==============================
 参数从 config.yaml 读取，信号逻辑与回测共用 alphaflow 模块。
 
-用法: python ibkr_trading_system_v8.py
+用法: python scripts/live/ibkr_trading_system_v8.py
 """
 
 import asyncio
@@ -13,6 +13,11 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _bootstrap import setup_path
+
+setup_path(__file__)
 
 if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -26,7 +31,7 @@ except RuntimeError:
 from ib_insync import IB, Stock, MarketOrder
 import ib_insync.util as util
 
-from alphaflow.config import load_config, params_from_config
+from alphaflow.config import load_config, params_from_config, state_path
 from alphaflow.constants import is_index
 from alphaflow.indicators import compute_indicators
 from alphaflow.signals import (
@@ -60,7 +65,7 @@ class LiveSystemV8:
         self.peak_prices = {}
         self.stop_prices = {}
         self.pending_orders = set()
-        self.state_file_path = 'trading_state.json'
+        self.state_file_path = state_path('trading_state.json')
         self.load_state()
 
     def save_state(self):
@@ -68,7 +73,7 @@ class LiveSystemV8:
         try:
             with open(self.state_file_path, 'w', encoding='utf-8') as f:
                 json.dump(state, f, indent=4)
-            logger.info("💾 交易状态已成功保存至 trading_state.json")
+            logger.info(f"💾 交易状态已成功保存至 {self.state_file_path}")
         except Exception as e:
             logger.error(f"❌ 保存交易状态失败: {e}")
 
@@ -79,9 +84,9 @@ class LiveSystemV8:
                     state = json.load(f)
                 self.peak_prices = state.get('peak_prices', {})
                 self.stop_prices = state.get('stop_prices', {})
-                logger.info("💾 成功从 trading_state.json 加载历史状态！")
+                logger.info(f"💾 成功从 {self.state_file_path} 加载历史状态！")
             except Exception as e:
-                logger.error(f"❌ 读取 trading_state.json 失败，将重新初始化: {e}")
+                logger.error(f"❌ 读取 {self.state_file_path} 失败，将重新初始化: {e}")
                 self.peak_prices = {}
                 self.stop_prices = {}
         else:

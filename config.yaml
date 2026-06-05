@@ -52,7 +52,7 @@ index_tickers:
   - "QQQ"
   - "VOO"
 
-# 热门股短线策略（ibkr_hot_stocks.py，使用 alloc_stock 40% 资金池）
+# 热门股短线策略（scripts/live/ibkr_hot_stocks.py，使用 alloc_stock 40% 资金池）
 hot_trading:
   client_id: 2          # 与 V8 区分，避免 TWS 客户端 ID 冲突
   loop_seconds: 60
@@ -85,7 +85,7 @@ hot_trading:
     risk_per_trade: 0.02
     pool_drawdown_halt_pct: 0.05
 
-# Walk-Forward 样本外验证（用法: python walk_forward.py）
+# Walk-Forward 样本外验证（用法: python scripts/walk_forward.py）
 walk_forward:
   mode: holdout              # holdout | rolling
   scope: single              # single | portfolio

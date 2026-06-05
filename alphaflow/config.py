@@ -1,10 +1,33 @@
 """Configuration loading and typed parameter objects."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+# Repository root (parent of alphaflow/)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def output_path(name: str) -> Path:
+    """Path under output/ for generated artifacts (charts, CSV, YAML)."""
+    path = PROJECT_ROOT / 'output' / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def state_path(name: str) -> Path:
+    """Path under state/ for live-trading runtime JSON."""
+    path = PROJECT_ROOT / 'state' / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def default_config_path() -> Path:
+    return PROJECT_ROOT / 'config.yaml'
 
 
 @dataclass(frozen=True)
@@ -32,8 +55,9 @@ class RiskParams:
     index_multiplier: float = 3.0
 
 
-def load_config(path: str | Path = 'config.yaml') -> dict[str, Any]:
-    with open(path, 'r', encoding='utf-8') as f:
+def load_config(path: str | Path | None = None) -> dict[str, Any]:
+    config_file = Path(path) if path is not None else default_config_path()
+    with open(config_file, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
 

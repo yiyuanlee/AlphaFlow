@@ -5,8 +5,8 @@ AlphaFlow - 热门股短线策略（个股资金池）
 - 标的：IBKR 扫描器每日热门股，不固定名单
 - 持仓：最长 5 个日历日，到期强制平仓
 
-用法: python ibkr_hot_stocks.py
-建议与 ibkr_trading_system_v8.py（指数池 VOO/QQQ）并行运行。
+用法: python scripts/live/ibkr_hot_stocks.py
+建议与 scripts/live/ibkr_trading_system_v8.py（指数池 VOO/QQQ）并行运行。
 """
 
 from __future__ import annotations
@@ -19,11 +19,16 @@ import io
 from datetime import date, datetime, time as dt_time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _bootstrap import setup_path
+
+setup_path(__file__)
+
 import ib_insync.util as util
 import pytz
 from ib_insync import IB, MarketOrder, Stock
 
-from alphaflow.config import load_config
+from alphaflow.config import load_config, state_path
 from alphaflow.hot_config import hot_config_from_yaml
 from alphaflow.hot_indicators import compute_intraday_indicators
 from alphaflow.hot_signals import (
@@ -49,7 +54,7 @@ LIVE = CONFIG.get('live', {})
 TWS_HOST = LIVE.get('tws_host', '127.0.0.1')
 TWS_PORT = LIVE.get('tws_port', 7497)
 CLIENT_ID = CONFIG.get('hot_trading', {}).get('client_id', 2)
-STATE_PATH = Path('hot_trading_state.json')
+STATE_PATH = state_path('hot_trading_state.json')
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', stream=sys.stdout)
 logger = logging.getLogger()

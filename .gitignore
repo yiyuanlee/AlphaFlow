@@ -14,18 +14,12 @@ venv/
 env/
 
 # Generated outputs (re-created by running scripts)
-equity_curve.png
-backtest_results.csv
-optimal_params.yaml
-walkforward_results.yaml
+output/*
+!output/.gitkeep
 
-# Runtime state files (contain live trading data, must not be committed)
-trading_state.json
-hot_trading_state.json
-
-# Diagnostic/debug outputs
-diagnosis_output.txt
-check_out.txt
+# Live runtime state (must not be committed)
+state/*
+!state/.gitkeep
 
 # IDE
 .vscode/
@@ -33,3 +27,6 @@ check_out.txt
 *.swp
 *.swo
 .DS_Store
+
+# pytest
+.pytest_cache/

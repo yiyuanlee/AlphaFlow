@@ -269,7 +269,7 @@ cd AlphaFlow
 pip install backtrader yfinance pandas matplotlib pyyaml
 
 # 3. 运行回测
-python backtest_multi.py
+python scripts/backtest_main.py
 
 # 4. 自定义参数（编辑 config.yaml）
 ```
