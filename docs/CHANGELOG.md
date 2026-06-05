@@ -9,11 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [9.2.0] - 2026-06-06
 
+### Added
+- **热门股合格化四项** — 事件型金叉、QQQ 200EMA 大盘过滤、ADX + 相对成交量过滤
+- **`alphaflow/hot_market.py`**, **`hot_journal.py`**, **`hot_replay.py`**, **`hot_stats.py`**
+- **`scripts/hot_paper_stats.py`** — 纸面交易 JSONL 统计（胜率、盈亏比、跳过原因）
+- **`scripts/hot_replay_backtest.py`** — 日线扫描器回放（TOP_PERC_GAIN 代理）
+- **`tests/test_hot_signals.py`** — 热门股入场过滤单元测试
+
 ### Changed
-- **项目目录整理** — 入口脚本迁入 `scripts/`，实盘迁入 `scripts/live/`，调试工具迁入 `scripts/debug/`
-- **文档** — `CHANGELOG.md`、`AlphaFlow-Strategy-Document.md` 移至 `docs/`
-- **生成物与状态** — 回测输出写入 `output/`，实盘 JSON 写入 `state/`（`alphaflow.config` 统一路径）
-- **`README.md`** — 更新快速开始命令与文件结构说明
+- **`hot_signals.py`** — `check_hot_entry` 返回 `(bool, reason)`，支持事件金叉与市场过滤
+- **`hot_indicators.py`** — 对齐 Backtrader EMA/Wilder，新增 `golden_cross` / `adx` / `rel_volume`
+- **`ibkr_hot_stocks.py`** — 集成大盘过滤、完整入场链、纸面日志
+- **`config.yaml`** — `market_filter`、`entry` 扩展字段、`replay` 段
+- **项目目录** — 脚本迁入 `scripts/`，文档迁入 `docs/`，输出/状态目录分离
 
 ## [9.0.0] - 2026-06-03
 

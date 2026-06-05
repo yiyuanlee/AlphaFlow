@@ -16,6 +16,8 @@ env/
 # Generated outputs (re-created by running scripts)
 output/*
 !output/.gitkeep
+hot_paper_trades.jsonl
+hot_replay_results.json
 
 # Live runtime state (must not be committed)
 state/*

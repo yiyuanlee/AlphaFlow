@@ -68,12 +68,22 @@ hot_trading:
     max_hold_days: 5                 # 最长持仓 5 个日历日
     max_positions: 5
     max_single_position_pct: 0.10    # 单票不超过个股池 10%
+  market_filter:
+    benchmark: "QQQ"           # 大盘趋势过滤基准
+    trend_period: 200          # 基准在 trend_period EMA 之上才开仓
+    require_bull_market: true
   entry:
     fast_ema: 9
     slow_ema: 21
     rsi_period: 14
     rsi_max: 70
     require_above_vwap: true
+    require_golden_cross: true # 事件型金叉（当根 K 线发生交叉）
+    adx_period: 14
+    min_adx: 20                # 趋势强度过滤
+    rel_volume_period: 20
+    min_rel_volume: 1.2        # 相对成交量 > 20 根均量 × 1.2
+    require_bull_market: true
   exit:
     take_profit_pct: 0.05
     stop_loss_pct: 0.04
@@ -84,6 +94,11 @@ hot_trading:
     stock_pool_pct: 0.40             # 与 risk.alloc_stock 对齐
     risk_per_trade: 0.02
     pool_drawdown_halt_pct: 0.05
+  replay:
+    start_date: "2023-01-01"         # 扫描器日线回放区间
+    end_date: "2026-06-03"
+    initial_cash: 20000.0            # 个股池 40% of 50k
+    commission: 0.001
 
 # Walk-Forward 样本外验证（用法: python scripts/walk_forward.py）
 walk_forward:

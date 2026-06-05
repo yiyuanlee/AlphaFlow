@@ -31,6 +31,8 @@ from ib_insync import IB, MarketOrder, Stock
 from alphaflow.config import load_config, state_path
 from alphaflow.hot_config import hot_config_from_yaml
 from alphaflow.hot_indicators import compute_intraday_indicators
+from alphaflow.hot_journal import log_hot_event
+from alphaflow.hot_market import is_market_bullish
 from alphaflow.hot_signals import (
     calc_hot_position_size,
     check_hot_entry,
@@ -178,10 +180,22 @@ class HotStockTrader:
                 entry=HOT.entry,
                 exit_params=HOT.exit,
                 position_params=HOT.position,
+                as_of=date.today(),
             )
             if reason:
                 days = hold_days(meta['entry_date'])
+                entry_px = meta.get('entry_price', p.avgCost)
+                pnl_pct = (px / entry_px - 1) * 100 if entry_px else 0.0
                 logger.info(f'🚩 [{sym}] 离场 ({reason}) 持仓{days}天 价格={px:.2f}')
+                log_hot_event(
+                    'exit',
+                    symbol=sym,
+                    price=px,
+                    reason=reason,
+                    hold_days=days,
+                    pnl_pct=pnl_pct,
+                    entry_price=entry_px,
+                )
                 self.ib.placeOrder(contract, MarketOrder('SELL', abs(int(p.position))))
                 self.positions.pop(sym, None)
                 self.save_state()
@@ -191,6 +205,16 @@ class HotStockTrader:
         hot_list = self.scanner.get_universe()
 
         if len(held) >= HOT.position.max_positions:
+            return
+
+        market_ok, market_info = is_market_bullish(HOT.market)
+        if HOT.entry.require_bull_market and not market_ok:
+            logger.info(
+                f'⏸ 大盘过滤: {market_info.get("benchmark")} '
+                f'close={market_info.get("close", 0):.2f} '
+                f'EMA{HOT.market.trend_period}={market_info.get("ema_trend", 0):.2f} — 暂停开仓'
+            )
+            log_hot_event('market_halt', **market_info)
             return
 
         for sym in hot_list:
@@ -209,14 +233,29 @@ class HotStockTrader:
             if px < HOT.scanner.min_price:
                 continue
 
-            if not check_hot_entry(
+            ok, skip_reason = check_hot_entry(
                 close=px,
                 ema_fast=latest['ema_fast'],
                 ema_slow=latest['ema_slow'],
                 rsi=latest['rsi'],
                 vwap=latest['vwap'],
+                golden_cross=bool(latest.get('golden_cross')),
+                adx=latest.get('adx'),
+                rel_volume=latest.get('rel_volume'),
+                market_bullish=market_ok,
                 params=HOT.entry,
-            ):
+            )
+            if not ok:
+                log_hot_event(
+                    'signal_skip',
+                    symbol=sym,
+                    price=px,
+                    reason=skip_reason,
+                    golden_cross=bool(latest.get('golden_cross')),
+                    adx=latest.get('adx'),
+                    rel_volume=latest.get('rel_volume'),
+                    rsi=latest.get('rsi'),
+                )
                 continue
 
             size = calc_hot_position_size(
@@ -232,7 +271,19 @@ class HotStockTrader:
 
             logger.info(
                 f'🚀 [{sym}] 热门股入场 {size} 股 @ ~{px:.2f} '
-                f'(个股池已用 ${stock_exposure:,.0f} / ${net_liq * HOT.risk.stock_pool_pct:,.0f})'
+                f'(金叉+ADX{latest.get("adx", 0):.1f}+RVOL{latest.get("rel_volume", 0):.2f}) '
+                f'个股池 ${stock_exposure:,.0f}/${net_liq * HOT.risk.stock_pool_pct:,.0f}'
+            )
+            log_hot_event(
+                'entry',
+                symbol=sym,
+                price=px,
+                shares=size,
+                golden_cross=True,
+                adx=latest.get('adx'),
+                rel_volume=latest.get('rel_volume'),
+                rsi=latest.get('rsi'),
+                market=market_info,
             )
             self.ib.placeOrder(contract, MarketOrder('BUY', size))
             self.positions[sym] = {'entry_date': date.today().isoformat(), 'entry_price': px}

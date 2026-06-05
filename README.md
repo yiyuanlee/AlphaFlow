@@ -27,7 +27,7 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 | **指数趋势** | `scripts/live/ibkr_trading_system_v8.py` | 60% (`alloc_index`) | 固定 QQQ / VOO | 数日~数月 |
 | **热门股短线** | `scripts/live/ibkr_hot_stocks.py` | 40% (`alloc_stock`) | IBKR 扫描器每日涨幅榜 | **≤ 5 天** |
 
-热门股策略不绑定固定个股名单，每 15 分钟扫描 `TOP_PERC_GAIN`，满足 EMA 金叉 + VWAP 上方 + RSI 过滤后入场，到期或止盈/止损离场。
+热门股策略不绑定固定个股名单，每 15 分钟扫描 `TOP_PERC_GAIN`；在 QQQ 牛市环境下，当根 K 线金叉 + VWAP 上方 + RSI/ADX/相对成交量过滤后入场，纸面日志与日线回放可验证。
 
 ### 📋 标的与资金池说明
 
@@ -50,12 +50,16 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
    * **60/40 资金池**: 指数类 (VOO/QQQ) 最多占 60%，个股最多占 40%
    * **指数权重加成**: QQQ/VOO 获得 3 倍风险预算
 
-### 🔥 热门股策略逻辑 (V9.0)
+### 🔥 热门股策略逻辑 (V9.1)
 
 1. **标的来源**: IBKR `TOP_PERC_GAIN` 扫描器（美股主板，价 ≥ $10，量 ≥ 100 万）
-2. **入场**: EMA 9 金叉 EMA 21 + 价格在 VWAP 上方 + RSI < 70
-3. **离场**: 止盈 5% / 止损 4% / EMA 死叉 / 跌破 VWAP / **满 5 个日历日强制平仓**
-4. **风控**: 最多 5 个仓位，单票不超过个股池 10%，个股池回撤 5% 暂停开仓
+2. **大盘过滤**: `QQQ` 收盘价 > 200 日 EMA 时才允许开仓
+3. **入场（事件型）**: **当根 K 线 EMA 9 金叉 EMA 21** + 价格 > VWAP + RSI < 70 + **ADX > 20** + **相对成交量 > 1.2×**
+4. **离场**: 止盈 5% / 止损 4% / EMA 死叉 / 跌破 VWAP / **满 5 个日历日强制平仓**
+5. **风控**: 最多 5 个仓位，单票不超过个股池 10%，个股池回撤 5% 暂停开仓
+6. **验证工具**:
+   - 纸面日志 → `output/hot_paper_trades.jsonl`，统计 `python scripts/hot_paper_stats.py`
+   - 日线扫描器回放 → `python scripts/hot_replay_backtest.py`（用涨幅榜代理 TOP_PERC_GAIN）
 
 ### ✅ 指标对齐（回测 ↔ 实盘）
 
@@ -146,6 +150,8 @@ python scripts/verify_indicators.py
 # 7. 实盘交易（需先打开 IBKR TWS/Gateway 模拟盘 7497）
 python scripts/live/ibkr_trading_system_v8.py   # 指数池：QQQ/VOO（client_id=1）
 python scripts/live/ibkr_hot_stocks.py          # 个股池：每日热门股（client_id=2）
+python scripts/hot_paper_stats.py               # 热门股纸面交易统计
+python scripts/hot_replay_backtest.py           # 热门股日线扫描器回放
 
 # 8. 自定义参数（config.yaml → index_tickers / hot_trading）
 ```
@@ -198,12 +204,14 @@ Multiple filters to navigate high-volatility markets:
    * **60/40 Capital Pool**: Indices (VOO/QQQ) capped at 60%, stocks at 40%
    * **Index Weight Boost**: QQQ/VOO receive 3x risk allocation
 
-### 🔥 Hot-Stock Strategy Logic (V9.0)
+### 🔥 Hot-Stock Strategy Logic (V9.1)
 
 1. **Universe**: IBKR `TOP_PERC_GAIN` scanner (US major, price ≥ $10, volume ≥ 1M)
-2. **Entry**: EMA 9 golden cross EMA 21 + price above VWAP + RSI < 70
-3. **Exit**: 5% take-profit / 4% stop-loss / EMA death cross / VWAP break / **forced exit after 5 calendar days**
-4. **Risk**: Max 5 positions, 10% per name within stock pool, halt new entries if pool drawdown ≥ 5%
+2. **Regime**: Open new trades only when `QQQ` close > 200-day EMA
+3. **Entry (event)**: **Golden cross on current bar** + price > VWAP + RSI < 70 + ADX > 20 + relative volume > 1.2×
+4. **Exit**: 5% TP / 4% SL / EMA cross / VWAP break / **5-day max hold**
+5. **Risk**: Max 5 positions, 10% per name, pool drawdown halt at 5%
+6. **Validation**: paper journal + `scripts/hot_paper_stats.py`; daily scanner replay via `scripts/hot_replay_backtest.py`
 
 ### ✅ Indicator Parity (Backtest ↔ Live)
 
@@ -288,6 +296,8 @@ python scripts/verify_indicators.py
 # 7. Live trading (IBKR TWS/Gateway paper port 7497)
 python scripts/live/ibkr_trading_system_v8.py   # Index sleeve: QQQ/VOO
 python scripts/live/ibkr_hot_stocks.py          # Stock sleeve: daily hot tickers
+python scripts/hot_paper_stats.py               # Hot-stock paper trade stats
+python scripts/hot_replay_backtest.py           # Daily scanner replay proxy
 
 # 8. Customize parameters (config.yaml → index_tickers / hot_trading)
 ```
@@ -313,6 +323,8 @@ AlphaFlow/
 │   ├── optimize.py           # 参数网格搜索
 │   ├── walk_forward.py       # Walk-Forward 验证
 │   ├── verify_indicators.py  # 指标对齐验证
+│   ├── hot_paper_stats.py    # 热门股纸面统计
+│   ├── hot_replay_backtest.py # 热门股扫描器日线回放
 │   ├── live/                 # IBKR 实盘
 │   │   ├── ibkr_trading_system_v8.py  # 指数池 QQQ/VOO
 │   │   ├── ibkr_hot_stocks.py         # 热门股池
@@ -348,6 +360,7 @@ AlphaFlow/
 - [x] **V8.1**: 参数优化框架 + 自动化参数搜索 / Auto Parameter Tuning
 - [x] **V9.0**: 热门股短线策略（扫描器动态标的，≤5天持仓）/ Hot-Stock Momentum Sleeve
 - [x] **V9.1**: 指标对齐验证（Backtrader ↔ alphaflow.indicators，QQQ/VOO 100%）/ Indicator Parity Checks
+- [x] **V9.2**: 热门股合格化（事件金叉、QQQ 大盘过滤、ADX/RVOL、纸面日志、扫描器回放）/ Hot-Stock Validation Suite
 
 ## ⚠️ Disclaimer / 免责声明
 This project is for academic and technical discussion only. It does NOT constitute investment advice. Trading involves significant risk. The author is not responsible for any financial losses incurred from using this software.

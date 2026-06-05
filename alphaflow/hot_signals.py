@@ -1,5 +1,7 @@
 """Entry/exit and sizing for hot-stock momentum sleeve."""
 
+from __future__ import annotations
+
 from datetime import date, datetime
 from typing import Optional
 
@@ -14,15 +16,35 @@ def check_hot_entry(
     ema_slow: float,
     rsi: float,
     vwap: float,
+    golden_cross: bool,
+    adx: float,
+    rel_volume: float,
+    market_bullish: bool,
     params: HotEntryParams,
-) -> bool:
+) -> tuple[bool, str]:
+    """Return (allowed, reason_code)."""
+    if params.require_bull_market and not market_bullish:
+        return False, 'market_not_bullish'
+
+    if params.require_golden_cross and not golden_cross:
+        return False, 'no_golden_cross'
+
     if ema_fast <= ema_slow:
-        return False
+        return False, 'ema_not_aligned'
+
     if rsi >= params.rsi_max:
-        return False
+        return False, 'rsi_too_high'
+
     if params.require_above_vwap and (pd.isna(vwap) or close <= vwap):
-        return False
-    return True
+        return False, 'below_vwap'
+
+    if pd.isna(adx) or adx < params.min_adx:
+        return False, 'adx_too_low'
+
+    if pd.isna(rel_volume) or rel_volume < params.min_rel_volume:
+        return False, 'rel_volume_too_low'
+
+    return True, 'ok'
 
 
 def hold_days(entry_date: str, today: date | None = None) -> int:
@@ -41,9 +63,10 @@ def check_hot_exit(
     entry: HotEntryParams,
     exit_params: HotExitParams,
     position_params: HotPositionParams,
+    as_of: date | None = None,
 ) -> Optional[str]:
     if exit_params.force_exit_on_max_hold:
-        if hold_days(entry_date) >= position_params.max_hold_days:
+        if hold_days(entry_date, as_of) >= position_params.max_hold_days:
             return 'max_hold_days'
 
     if current_price >= entry_price * (1 + exit_params.take_profit_pct):
