@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.3.0] - 2026-06-03
+
+### Added
+- **`walk_forward.py`** — Walk-Forward 样本外验证 CLI
+- **`alphaflow/walkforward.py`** — holdout（训练/验证/测试）与 rolling 滚动窗口模式
+- **`alphaflow/grid.py`** — 共享参数网格搜索与目标函数（sharpe/return/calmar）
+- **`config.yaml`** — `walk_forward` 分段配置（默认 VOO/QQQ，2010–2020 训练 / 2021–2023 验证 / 2024–2026 测试）
+
+### Changed
+- **`alphaflow/backtest.py`** — 支持按日期切片回测（`run_period_single` / `run_period_portfolio`）
+- **`alphaflow/data.py`** — 新增 `slice_ohlcv` 日期切片工具
+
 ## [8.2.0] - 2026-06-03
 
 ### Added

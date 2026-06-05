@@ -83,11 +83,14 @@ python backtest_main.py
 # 4. 参数优化（网格搜索，自动保存最优参数到 optimal_params.yaml）
 python optimize.py
 
-# 5. 实盘交易（需先打开 IBKR TWS/Gateway，端口 7497）
+# 5. Walk-Forward 样本外验证（训练→验证→测试，避免过拟合）
+python walk_forward.py --quick
+
+# 6. 实盘交易（需先打开 IBKR TWS/Gateway，端口 7497）
 python ibkr_trading_system_v8.py  # 稳定版（日线策略）
 # python ibkr_trading_system_v9.py  # 实验版（日内高频）
 
-# 6. 自定义参数（编辑 config.yaml）
+# 7. 自定义参数（编辑 config.yaml、walk_forward 分段）
 ```
 
 ---
@@ -171,11 +174,14 @@ python backtest_main.py
 # 4. Parameter optimization (grid search, saves to optimal_params.yaml)
 python optimize.py
 
-# 5. Live trading (requires IBKR TWS/Gateway on port 7497)
+# 5. Walk-forward out-of-sample validation (train → val → test)
+python walk_forward.py --quick
+
+# 6. Live trading (requires IBKR TWS/Gateway on port 7497)
 python ibkr_trading_system_v8.py  # Stable daily strategy
 # python ibkr_trading_system_v9.py  # Experimental intraday
 
-# 6. Customize parameters (edit config.yaml)
+# 7. Customize parameters (edit config.yaml, walk_forward windows)
 ```
 
 ---
@@ -190,8 +196,11 @@ AlphaFlow/
 │   ├── signals.py            # 入场/离场/仓位计算逻辑
 │   ├── strategy.py           # Backtrader 策略实现
 │   ├── backtest.py           # 回测引擎
+│   ├── grid.py               # 参数网格搜索
+│   ├── walkforward.py        # Walk-Forward 验证核心
 │   └── data.py               # 数据下载
 ├── backtest_main.py          # ⭐ 主回测入口（组合 + 单标的）
+├── walk_forward.py           # ⭐ Walk-Forward 样本外验证
 ├── optimize.py               # 参数优化框架（网格搜索）
 ├── ibkr_trading_system_v8.py # ⭐ 实盘交易系统 V8.1（稳定版）
 ├── ibkr_trading_system_v9.py # 实盘 V9（日内高频，experimental）

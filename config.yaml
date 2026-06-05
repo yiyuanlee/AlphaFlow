@@ -47,6 +47,30 @@ live:
   client_id: 1
   scan_interval_seconds: 3600
 
+# Walk-Forward 样本外验证（用法: python walk_forward.py）
+walk_forward:
+  mode: holdout              # holdout | rolling
+  scope: single              # single | portfolio
+  objective: sharpe          # sharpe | return | calmar
+  top_k_train: 10            # 训练集 Top-K 候选进入验证集
+  quick_grid: false          # true = 较小网格，更快；或命令行 --quick
+  tickers:
+    - "VOO"
+    - "QQQ"
+  holdout:
+    train_start: "2010-01-01"
+    train_end: "2020-12-31"
+    val_start: "2021-01-01"
+    val_end: "2023-12-31"
+    test_start: "2024-01-01"
+    test_end: "2026-06-03"
+  rolling:
+    train_years: 5
+    test_years: 1
+    step_years: 1
+    data_start: "2010-01-01"
+    data_end: "2026-06-03"
+
 # 回测标的列表
 tickers:
   - "QQQ"

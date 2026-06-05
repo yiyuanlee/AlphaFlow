@@ -17,6 +17,7 @@ env/
 equity_curve.png
 backtest_results.csv
 optimal_params.yaml
+walkforward_results.yaml
 
 # Runtime state files (contain live trading data, must not be committed)
 trading_state.json
