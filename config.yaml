@@ -33,6 +33,7 @@ risk:
   risk_per_trade: 0.030    # 每笔交易风险敞口提升至 (3.0%)
   alloc_index: 0.60       # 指数类标的（VOO, QQQ）最大资金分配占比 60%
   alloc_stock: 0.40       # 个股类标的最大资金分配占比 40%
+  index_multiplier: 3.0   # 指数类标的风险预算乘数
 
 backtest:
   initial_cash: 10000.0    # 初始资金
@@ -61,7 +62,7 @@ tickers:
   - "UPST"
   - "CVNA"
   - "SHOP"
-  - "SQ"
+  - "XYZ"
   - "MARA"
   - "APP"
   - "NET"

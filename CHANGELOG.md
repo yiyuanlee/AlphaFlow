@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [8.2.0] - 2026-06-03
+
+### Added
+- **`alphaflow/`** shared strategy package — `config`, `indicators`, `signals`, `strategy`, `backtest`, `data`
+  - Backtest, optimize, and live trading now share the same entry/exit/position-sizing logic
+- **Per-ticker backtest table** in `backtest_main.py` for README-aligned reporting
+
+### Changed
+- **`backtest_main.py`** — thin entry point using `alphaflow.backtest`
+- **`optimize.py`** — uses shared `AlphaFlowStrategy` with full strategy params from config
+- **`ibkr_trading_system_v8.py`** — uses `alphaflow.indicators` + `alphaflow.signals`; golden-cross entry aligned with backtest; ATR dynamic trailing stop; 60/40 portfolio allocation in live mode
+- **`README.md`** — updated backtest results ($10,000, 2010–2026) with portfolio + single-ticker tables
+- **`config.yaml`** — added `index_multiplier`; replaced delisted `SQ` with `XYZ`
+
 ## [8.1.0] - 2026-05-11
 
 ### Added

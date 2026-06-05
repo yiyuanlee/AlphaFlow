@@ -14,36 +14,55 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 
 ### 🛠️ 技术栈
 * **语言**: Python 3.10+
-* **回测框架**: [Backtrader](https://www.backtrader.com/) + 自定义 V8 引擎
+* **回测框架**: [Backtrader](https://www.backtrader.com/)
+* **共享策略模块**: `alphaflow/`（回测、优化、实盘共用同一套信号逻辑）
 * **数据源**: Yahoo Finance (yfinance)
 * **实盘对接**: IBKR API (ib_insync) ✅ 已实现
 * **配置文件**: config.yaml（参数集中管理）
 
 ### 🧠 策略逻辑 (V8.1)
 采用多重过滤机制，应对高波动市场：
-1. **趋势过滤**: 仅在价格高于 **200日均线** 的牛市环境下入场
-2. **入场信号**: EMA 10 日线上穿 EMA 25 日线，同时 **RSI < 65** 且 **ADX > 20**（趋势强度确认）
+1. **趋势过滤**: 仅在价格高于 **200日 EMA** 的牛市环境下入场
+2. **入场信号**: EMA 10 金叉 EMA 25，同时 **RSI < 65**、**ADX > 20**、**ATR > ATR均值 × 0.8**（波动率状态确认）
 3. **风险管理 (核心)**:
-   * **ATR 自适应止损**: 动态设置止损位，2.5 倍 ATR 自动适应市场波动
-   * **移动止盈 (Trailing Stop)**: 从持仓最高点回撤 12% 时自动锁利离场
+   * **ATR 自适应止损**: 动态设置止损位，2.5 倍 ATR
+   * **ATR 动态移动止盈**: 从最高点回撤 `min(3×ATR, 12%)` 时锁利离场
+   * **60/40 资金池**: 指数类 (VOO/QQQ) 最多占 60%，个股最多占 40%
    * **指数权重加成**: QQQ/VOO 获得 3 倍风险预算
 
-### 📊 多标的回测结果（2022-01-01 ~ 2026-03-20）
-**初始资金: $3,000 | 佣金: 0.1%**
+### 📊 回测结果（2010-01-01 ~ 2026-06-03）
+**初始资金: $10,000 | 佣金: 0.1% | 标的: config.yaml 中 16 只**
+
+**真实组合回测（共享 $10,000 资金池，60/40 配置）**
+
+| 指标 | 数值 |
+|:---:|:---:|
+| **总收益率** | **+70.07%** 🟢 |
+| 结束净值 | $17,007 |
+| 夏普比率 | -0.03 |
+| 最大回撤 | 14.62% |
+
+**单标的独立回测（各 $10,000 独立资金池，供横向对比）**
 
 | 标的 | 收益率 | 夏普比率 | 最大回撤 | 交易数 | 胜率 |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| **VOO** | **+28.33%** 🟢 | **0.59** | 5.32% | 3 | 100% |
-| **QQQ** | **+9.34%** 🟢 | **0.26** | 6.68% | 2 | 50% |
-| GOOGL | +4.18% | -0.10 | 2.63% | 2 | 100% |
-| TSLA | +0.12% | -3.71 | 0.79% | 1 | 100% |
-| NVDA | -0.70% | -1.86 | 2.53% | 3 | 33% |
-| AMD | -1.63% | -2.03 | 2.35% | 2 | 0% |
-| AAPL | -6.00% | -1.46 | 6.19% | 4 | 0% |
-| MSFT | 0.00% | 0.0 | 0.00% | 0 | — |
-| **平均** | **+4.21%** | **-1.04** | **3.31%** | **17** | — |
+| **VOO** | **+39.21%** 🟢 | -0.29 | 14.05% | 19 | 47% |
+| **PLTR** | **+30.50%** 🟢 | 0.03 | 8.33% | 4 | 50% |
+| **QQQ** | **+25.07%** 🟢 | -0.26 | 25.23% | 20 | 30% |
+| NVDA | +12.31% | -0.85 | 15.26% | 12 | 33% |
+| TSLA | +12.07% | -0.90 | 15.95% | 11 | 45% |
+| CVNA | +1.83% | -1.10 | 8.44% | 7 | 14% |
+| NET | +1.80% | -6.36 | 7.31% | 2 | 50% |
+| SMCI | +0.74% | -2.87 | 10.20% | 9 | 44% |
+| MSTR | +0.34% | -2.63 | 5.86% | 4 | 50% |
+| MARA | -1.42% | -4.24 | 6.31% | 3 | 33% |
+| CRWD | -2.53% | -1.86 | 10.27% | 6 | 33% |
+| APP | -4.25% | -3.87 | 4.59% | 2 | 0% |
+| AMD | -5.48% | -6.41 | 8.79% | 5 | 0% |
+| SHOP | -14.61% | -1.70 | 17.71% | 8 | 12% |
+| **平均** | **+5.97%** | — | — | — | — |
 
-> 📌 **策略更适合大盘指数**（VOO/QQQ）：趋势跟踪策略在具有明确趋势的大盘指数上表现更稳定，个股受突发新闻影响大，信号频繁失效。
+> 📌 组合回测中 PLTR、QQQ、VOO 贡献最大利润；大盘指数 (VOO/QQQ) 在单标的独立回测中依然表现最稳定。运行 `python backtest_main.py` 可复现最新结果。
 
 ### 🚀 快速开始
 
@@ -83,7 +102,8 @@ AlphaFlow aims to implement trend-following strategies in the US stock market wh
 
 ### 🛠️ Tech Stack
 * **Language**: Python 3.10+
-* **Backtesting**: [Backtrader](https://www.backtrader.com/) + custom V8 engine
+* **Backtesting**: [Backtrader](https://www.backtrader.com/)
+* **Shared Strategy Module**: `alphaflow/` (same signal logic for backtest, optimize, and live)
 * **Data Source**: Yahoo Finance (yfinance)
 * **Live Trading**: IBKR API (ib_insync) ✅
 * **Config**: config.yaml (centralized parameters)
@@ -91,28 +111,46 @@ AlphaFlow aims to implement trend-following strategies in the US stock market wh
 ### 🧠 Strategy Logic (V8.1)
 Multiple filters to navigate high-volatility markets:
 1. **Trend Filter**: Long positions only when price is above the **200-day EMA**
-2. **Entry Signal**: EMA 10 crosses above EMA 25, with **RSI < 65** and **ADX > 20** (trend strength confirmation)
+2. **Entry Signal**: EMA 10 golden cross EMA 25, with **RSI < 65**, **ADX > 20**, and **ATR > ATR-SMA × 0.8**
 3. **Risk Management (Core)**:
    * **ATR Adaptive Stop-Loss**: Dynamic stops at 2.5x ATR
-   * **Trailing Stop**: Auto-exit when price drops 12% from peak
+   * **ATR Dynamic Trailing Stop**: Exit at `min(3×ATR, 12%)` drawdown from peak
+   * **60/40 Capital Pool**: Indices (VOO/QQQ) capped at 60%, stocks at 40%
    * **Index Weight Boost**: QQQ/VOO receive 3x risk allocation
 
-### 📊 Multi-Asset Backtest Results (2022-01-01 ~ 2026-03-20)
-**Initial Capital: $3,000 | Commission: 0.1%**
+### 📊 Backtest Results (2010-01-01 ~ 2026-06-03)
+**Initial Capital: $10,000 | Commission: 0.1% | Tickers: 16 from config.yaml**
+
+**Portfolio Backtest (shared $10,000 pool, 60/40 allocation)**
+
+| Metric | Value |
+|:---:|:---:|
+| **Total Return** | **+70.07%** 🟢 |
+| Final Value | $17,007 |
+| Sharpe Ratio | -0.03 |
+| Max Drawdown | 14.62% |
+
+**Single-Ticker Backtest (each $10,000 independent, for comparison)**
 
 | Ticker | Return | Sharpe | Max DD | Trades | Win Rate |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| **VOO** | **+28.33%** 🟢 | **0.59** | 5.32% | 3 | 100% |
-| **QQQ** | **+9.34%** 🟢 | **0.26** | 6.68% | 2 | 50% |
-| GOOGL | +4.18% | -0.10 | 2.63% | 2 | 100% |
-| TSLA | +0.12% | -3.71 | 0.79% | 1 | 100% |
-| NVDA | -0.70% | -1.86 | 2.53% | 3 | 33% |
-| AMD | -1.63% | -2.03 | 2.35% | 2 | 0% |
-| AAPL | -6.00% | -1.46 | 6.19% | 4 | 0% |
-| MSFT | 0.00% | 0.0 | 0.00% | 0 | — |
-| **Average** | **+4.21%** | **-1.04** | **3.31%** | **17** | — |
+| **VOO** | **+39.21%** 🟢 | -0.29 | 14.05% | 19 | 47% |
+| **PLTR** | **+30.50%** 🟢 | 0.03 | 8.33% | 4 | 50% |
+| **QQQ** | **+25.07%** 🟢 | -0.26 | 25.23% | 20 | 30% |
+| NVDA | +12.31% | -0.85 | 15.26% | 12 | 33% |
+| TSLA | +12.07% | -0.90 | 15.95% | 11 | 45% |
+| CVNA | +1.83% | -1.10 | 8.44% | 7 | 14% |
+| NET | +1.80% | -6.36 | 7.31% | 2 | 50% |
+| SMCI | +0.74% | -2.87 | 10.20% | 9 | 44% |
+| MSTR | +0.34% | -2.63 | 5.86% | 4 | 50% |
+| MARA | -1.42% | -4.24 | 6.31% | 3 | 33% |
+| CRWD | -2.53% | -1.86 | 10.27% | 6 | 33% |
+| APP | -4.25% | -3.87 | 4.59% | 2 | 0% |
+| AMD | -5.48% | -6.41 | 8.79% | 5 | 0% |
+| SHOP | -14.61% | -1.70 | 17.71% | 8 | 12% |
+| **Average** | **+5.97%** | — | — | — | — |
 
-> 📌 **Strategy is better suited for broad-market indices** (VOO/QQQ): Trend-following strategies perform more consistently on indices with clear trends, while individual stocks are more vulnerable to news-driven volatility.
+> 📌 In portfolio mode, PLTR, QQQ, and VOO contributed the most PnL. Run `python backtest_main.py` to reproduce the latest results.
 
 ### 🚀 Quick Start
 
@@ -146,22 +184,26 @@ python ibkr_trading_system_v8.py  # Stable daily strategy
 
 ```
 AlphaFlow/
-├── backtest_main.py          # ⭐ 主回测入口（真实组合回测，60/40 配置）
-├── optimize.py               # 参数优化框架（网格搜索，自动保存最优参数）
-├── ibkr_trading_system_v8.py # ⭐ 实盘交易系统 V8.1（稳定版，推荐使用）
-├── ibkr_trading_system_v9.py # 实盘交易系统 V9（日内高频，experimental）
-├── diagnose.py               # 策略信号诊断工具（排查为什么没有交易信号）
+├── alphaflow/                # ⭐ 共享策略模块（回测/优化/实盘共用）
+│   ├── config.py             # 配置加载与类型化参数
+│   ├── indicators.py         # 指标计算（EMA/RSI/ADX/ATR）
+│   ├── signals.py            # 入场/离场/仓位计算逻辑
+│   ├── strategy.py           # Backtrader 策略实现
+│   ├── backtest.py           # 回测引擎
+│   └── data.py               # 数据下载
+├── backtest_main.py          # ⭐ 主回测入口（组合 + 单标的）
+├── optimize.py               # 参数优化框架（网格搜索）
+├── ibkr_trading_system_v8.py # ⭐ 实盘交易系统 V8.1（稳定版）
+├── ibkr_trading_system_v9.py # 实盘 V9（日内高频，experimental）
+├── diagnose.py               # 策略信号诊断工具
 ├── debug_signals.py          # 信号逐一扫描调试脚本
 ├── check_data.py             # 数据下载格式检查工具
 ├── test_ibkr.py              # IBKR 连接测试
-├── config.yaml               # 全局参数配置（回测与实盘共用）
+├── config.yaml               # 全局参数配置
 ├── requirements.txt          # Python 依赖
-├── AlphaFlow-Strategy-Document.md  # 策略详细文档
-├── CHANGELOG.md              # 版本变更日志
-├── archive/                  # 历史版本（已废弃，仅供参考）
-│   ├── backtest_multi.py
-│   ├── backtest_pro.py
-│   └── backtest_v4.0.py
+├── AlphaFlow-Strategy-Document.md
+├── CHANGELOG.md
+├── archive/                  # 历史版本（已废弃）
 └── README.md
 ```
 
