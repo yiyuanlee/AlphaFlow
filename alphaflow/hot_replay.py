@@ -6,17 +6,21 @@ VWAP filter uses close > (high+low)/2 on daily bars (session-strength proxy).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 from typing import Any
 
 import pandas as pd
 
 from alphaflow.data import fetch_data
-from alphaflow.hot_config import HotTradingConfig, hot_config_from_yaml
+from alphaflow.hot_config import HotEntryParams, HotTradingConfig, hot_config_from_yaml
 from alphaflow.hot_indicators import compute_daily_replay_indicators
 from alphaflow.hot_market import is_market_bullish
-from alphaflow.hot_signals import calc_hot_position_size, check_hot_entry, check_hot_exit, hold_days
+from alphaflow.hot_signals import calc_hot_position_size, check_hot_entry, check_hot_exit
+
+INDICATOR_PARAM_KEYS = frozenset({
+    'fast_ema', 'slow_ema', 'rsi_period', 'adx_period', 'rel_volume_period',
+})
 
 
 @dataclass
@@ -49,6 +53,14 @@ class ReplayResult:
     total_return_pct: float = 0.0
 
 
+@dataclass
+class ReplayContext:
+    ohlcv: dict[str, pd.DataFrame]
+    indicators: dict[str, pd.DataFrame]
+    trading_days: list[pd.Timestamp]
+    warmup_start: str
+
+
 def _replay_universe(config: dict[str, Any], hot: HotTradingConfig) -> list[str]:
     tickers = config.get('tickers', [])
     exclude = set(hot.exclude_symbols) | {hot.market.benchmark}
@@ -79,28 +91,57 @@ def scanner_proxy_daily(
     return [sym for sym, _ in rows[: hot.scanner.max_results]]
 
 
-def run_daily_replay(config: dict[str, Any], hot: HotTradingConfig | None = None) -> ReplayResult:
-    hot = hot or hot_config_from_yaml(config)
-    universe = _replay_universe(config, hot)
-    warmup_start = (
+def _warmup_start(hot: HotTradingConfig) -> str:
+    return (
         pd.Timestamp(hot.replay.start_date) - pd.Timedelta(days=max(hot.entry.slow_ema, hot.market.trend_period) + 30)
     ).strftime('%Y-%m-%d')
 
+
+def build_replay_indicators(ohlcv: dict[str, pd.DataFrame], entry: HotEntryParams) -> dict[str, pd.DataFrame]:
+    return {sym: compute_daily_replay_indicators(df, entry) for sym, df in ohlcv.items()}
+
+
+def load_replay_context(config: dict[str, Any], hot: HotTradingConfig) -> ReplayContext:
+    universe = _replay_universe(config, hot)
+    warmup_start = _warmup_start(hot)
+
     ohlcv: dict[str, pd.DataFrame] = {}
-    indicators: dict[str, pd.DataFrame] = {}
     for sym in universe:
         df = fetch_data(sym, warmup_start, hot.replay.end_date)
         if df is None or len(df) < hot.entry.slow_ema + 5:
             continue
         ohlcv[sym] = df
-        indicators[sym] = compute_daily_replay_indicators(df, hot.entry)
 
-    if not ohlcv:
-        return ReplayResult()
+    indicators = build_replay_indicators(ohlcv, hot.entry) if ohlcv else {}
 
     start = pd.Timestamp(hot.replay.start_date)
     end = pd.Timestamp(hot.replay.end_date)
     trading_days = sorted({d for df in ohlcv.values() for d in df.index if start <= d <= end})
+
+    return ReplayContext(
+        ohlcv=ohlcv,
+        indicators=indicators,
+        trading_days=trading_days,
+        warmup_start=warmup_start,
+    )
+
+
+def run_daily_replay(
+    config: dict[str, Any],
+    hot: HotTradingConfig | None = None,
+    context: ReplayContext | None = None,
+) -> ReplayResult:
+    hot = hot or hot_config_from_yaml(config)
+    if context is None:
+        context = load_replay_context(config, hot)
+
+    ohlcv = context.ohlcv
+    indicators = context.indicators
+    trading_days = context.trading_days
+    warmup_start = context.warmup_start
+
+    if not ohlcv:
+        return ReplayResult()
 
     cash = float(hot.replay.initial_cash)
     positions: dict[str, ReplayPosition] = {}

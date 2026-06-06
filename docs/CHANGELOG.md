@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.2.1] - 2026-06-06
+
+### Added
+- **`alphaflow/hot_grid.py`** — 热门股回放参数敏感性网格（`min_adx` / `min_rel_volume` / `rsi_max` / `require_golden_cross`）
+- **`scripts/hot_grid_search.py`** — 网格搜索 CLI，`--quick` / `--objective balanced`
+- **`tests/test_hot_grid.py`** — 网格评分单元测试
+
+### Changed
+- **`hot_replay.py`** — 抽取 `ReplayContext`，网格搜索复用预加载行情，避免重复下载
+
 ## [9.2.0] - 2026-06-06
 
 ### Added

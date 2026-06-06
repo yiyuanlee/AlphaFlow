@@ -99,6 +99,8 @@ hot_trading:
     end_date: "2026-06-03"
     initial_cash: 20000.0            # 个股池 40% of 50k
     commission: 0.001
+    grid_objective: balanced         # balanced | return | trades | profit_factor
+    # 敏感性网格默认维度见 alphaflow/hot_grid.py（用法: python scripts/hot_grid_search.py）
 
 # Walk-Forward 样本外验证（用法: python scripts/walk_forward.py）
 walk_forward:

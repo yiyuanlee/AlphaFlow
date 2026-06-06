@@ -60,6 +60,7 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 6. **验证工具**:
    - 纸面日志 → `output/hot_paper_trades.jsonl`，统计 `python scripts/hot_paper_stats.py`
    - 日线扫描器回放 → `python scripts/hot_replay_backtest.py`（用涨幅榜代理 TOP_PERC_GAIN）
+   - 参数敏感性网格 → `python scripts/hot_grid_search.py --quick`（`output/hot_grid_results.yaml`）
 
 ### ✅ 指标对齐（回测 ↔ 实盘）
 
@@ -152,6 +153,7 @@ python scripts/live/ibkr_trading_system_v8.py   # 指数池：QQQ/VOO（client_i
 python scripts/live/ibkr_hot_stocks.py          # 个股池：每日热门股（client_id=2）
 python scripts/hot_paper_stats.py               # 热门股纸面交易统计
 python scripts/hot_replay_backtest.py           # 热门股日线扫描器回放
+python scripts/hot_grid_search.py --quick      # 热门股参数敏感性网格
 
 # 8. 自定义参数（config.yaml → index_tickers / hot_trading）
 ```
@@ -298,6 +300,7 @@ python scripts/live/ibkr_trading_system_v8.py   # Index sleeve: QQQ/VOO
 python scripts/live/ibkr_hot_stocks.py          # Stock sleeve: daily hot tickers
 python scripts/hot_paper_stats.py               # Hot-stock paper trade stats
 python scripts/hot_replay_backtest.py           # Daily scanner replay proxy
+python scripts/hot_grid_search.py --quick      # Hot-stock parameter sensitivity grid
 
 # 8. Customize parameters (config.yaml → index_tickers / hot_trading)
 ```
@@ -325,6 +328,7 @@ AlphaFlow/
 │   ├── verify_indicators.py  # 指标对齐验证
 │   ├── hot_paper_stats.py    # 热门股纸面统计
 │   ├── hot_replay_backtest.py # 热门股扫描器日线回放
+│   ├── hot_grid_search.py     # 热门股参数敏感性网格
 │   ├── live/                 # IBKR 实盘
 │   │   ├── ibkr_trading_system_v8.py  # 指数池 QQQ/VOO
 │   │   ├── ibkr_hot_stocks.py         # 热门股池

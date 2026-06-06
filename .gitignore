@@ -18,6 +18,7 @@ output/*
 !output/.gitkeep
 hot_paper_trades.jsonl
 hot_replay_results.json
+hot_grid_results.yaml
 
 # Live runtime state (must not be committed)
 state/*
