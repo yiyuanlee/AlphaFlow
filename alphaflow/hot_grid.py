@@ -129,6 +129,7 @@ def run_hot_grid_search(
             indicators=indicator_cache[key],
             trading_days=context.trading_days,
             warmup_start=context.warmup_start,
+            market_regime=context.market_regime,
         )
 
         result = run_daily_replay(config, hot, run_context)

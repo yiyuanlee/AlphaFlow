@@ -15,7 +15,7 @@ import pandas as pd
 from alphaflow.data import fetch_data
 from alphaflow.hot_config import HotEntryParams, HotTradingConfig, hot_config_from_yaml
 from alphaflow.hot_indicators import compute_daily_replay_indicators
-from alphaflow.hot_market import is_market_bullish
+from alphaflow.hot_market import build_market_regime_lookup, is_market_bullish
 from alphaflow.hot_signals import calc_hot_position_size, check_hot_entry, check_hot_exit
 
 INDICATOR_PARAM_KEYS = frozenset({
@@ -59,6 +59,7 @@ class ReplayContext:
     indicators: dict[str, pd.DataFrame]
     trading_days: list[pd.Timestamp]
     warmup_start: str
+    market_regime: dict[str, bool]
 
 
 def _replay_universe(config: dict[str, Any], hot: HotTradingConfig) -> list[str]:
@@ -118,11 +119,14 @@ def load_replay_context(config: dict[str, Any], hot: HotTradingConfig) -> Replay
     end = pd.Timestamp(hot.replay.end_date)
     trading_days = sorted({d for df in ohlcv.values() for d in df.index if start <= d <= end})
 
+    market_regime = build_market_regime_lookup(hot.market, warmup_start, hot.replay.end_date)
+
     return ReplayContext(
         ohlcv=ohlcv,
         indicators=indicators,
         trading_days=trading_days,
         warmup_start=warmup_start,
+        market_regime=market_regime,
     )
 
 
@@ -139,6 +143,7 @@ def run_daily_replay(
     indicators = context.indicators
     trading_days = context.trading_days
     warmup_start = context.warmup_start
+    market_regime = context.market_regime
 
     if not ohlcv:
         return ReplayResult()
@@ -151,7 +156,12 @@ def run_daily_replay(
 
     for day in trading_days:
         day_date = day.date() if hasattr(day, 'date') else day
-        market_ok, market_info = is_market_bullish(hot.market, as_of=day_date, lookback_start=warmup_start)
+        market_ok, market_info = is_market_bullish(
+            hot.market,
+            as_of=day_date,
+            lookback_start=warmup_start,
+            regime_lookup=market_regime,
+        )
 
         # exits
         for sym in list(positions.keys()):
