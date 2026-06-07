@@ -19,6 +19,8 @@ output/*
 hot_paper_trades.jsonl
 hot_replay_results.json
 hot_grid_results.yaml
+options_trades.jsonl
+options_positions.json
 
 # Live runtime state (must not be committed)
 state/*

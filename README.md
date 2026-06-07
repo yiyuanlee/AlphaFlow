@@ -20,21 +20,31 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 * **实盘对接**: IBKR API (ib_insync) ✅ 已实现
 * **配置文件**: config.yaml（参数集中管理）
 
-### 🧠 双策略架构（指数 + 热门股）
+### 🧠 实盘架构（V10：期权为主）
 
-| 策略 | 脚本 | 资金池 | 标的来源 | 持仓周期 |
-|------|------|--------|---------|---------|
-| **指数趋势** | `scripts/live/ibkr_trading_system_v8.py` | 60% (`alloc_index`) | 固定 QQQ / VOO | 数日~数月 |
-| **热门股短线** | `scripts/live/ibkr_hot_stocks.py` | 40% (`alloc_stock`) | IBKR 扫描器每日涨幅榜 | **≤ 5 天** |
+| 策略 | 脚本 | client_id | 标的 | 说明 |
+|------|------|-----------|------|------|
+| **期权主策略** | `scripts/live/ibkr_options.py` | 3 | QQQ / VOO / AAPL / MSFT | CC / CSP / 垂直价差，按 QQQ regime 路由 |
+| **指数动量（降级）** | `scripts/live/ibkr_trading_system_v8.py` | 1 | QQQ / VOO | 仅保留回测对齐；勿与期权脚本并行开仓 |
+| ~~热门股短线~~ | ~~`ibkr_hot_stocks.py`~~ | — | — | **已停用**，归档于 `archive/scripts/live/` |
 
-热门股策略不绑定固定个股名单，每 15 分钟扫描 `TOP_PERC_GAIN`；在 QQQ 牛市环境下，当根 K 线金叉 + VWAP 上方 + RSI/ADX/相对成交量过滤后入场，纸面日志与日线回放可验证。
+期权策略在 `config.yaml` → `options_trading` 配置 DTE、delta 目标、风控与策略开关。底仓 (`stock_core`) 由 `UnderlyingManager` 维护，供 Covered Call 使用。
+
+```bash
+python scripts/live/ibkr_options.py --once   # 单轮（调试）
+python scripts/options_paper_stats.py        # 纸面统计
+python scripts/options_replay_proxy.py       # 路由代理回放（非链级 PnL）
+```
+
+详见 [`docs/Options-Strategy-Document.md`](docs/Options-Strategy-Document.md)。
 
 ### 📋 标的与资金池说明
 
 | 配置项 | 用途 | 说明 |
 |--------|------|------|
 | `index_tickers` | **V8 实盘** | 固定 QQQ / VOO，占用 `alloc_index` 60% 资金池 |
-| `hot_trading` | **热门股实盘** | IBKR 扫描器动态标的，占用 `alloc_stock` 40% 资金池，最长持仓 5 天 |
+| `options_trading` | **期权实盘（主）** | QQQ/VOO/AAPL/MSFT，`stock_core` 底仓，regime 路由 CC/CSP/价差 |
+| `hot_trading` | ~~热门股实盘~~ | **已停用**（配置保留只读） |
 | `tickers` | **历史回测** | 17 只固定名单，仅用于 `scripts/backtest_main.py` 组合/单标的回测 |
 | `walk_forward.tickers` | **样本外验证** | 默认 VOO / QQQ，`python scripts/walk_forward.py` |
 

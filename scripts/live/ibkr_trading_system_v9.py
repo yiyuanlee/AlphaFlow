@@ -1,5 +1,5 @@
 """
-AlphaFlow - V9 已迁移至热门股短线策略
+AlphaFlow - V9 已迁移至期权主策略
 用法: python scripts/live/ibkr_trading_system_v9.py
 """
 
@@ -11,7 +11,7 @@ from _bootstrap import setup_path
 
 setup_path(__file__)
 
-from ibkr_hot_stocks import main
+from ibkr_options import main
 
 if __name__ == '__main__':
     main()

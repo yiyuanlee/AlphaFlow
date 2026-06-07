@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [10.0.0] - 2026-06-06
+
+### Added
+- **`alphaflow/options/`** — 期权包：`options_config`, `chain`, `signals`, `regime`, `sizing`, `execution`, `state`, `journal`, `manager`, `underlying`, `replay_proxy`, `stats`
+- **`alphaflow/options/strategies/`** — Covered Call、Cash-Secured Put、Bull Put / Bear Call 垂直价差
+- **`scripts/live/ibkr_options.py`** — 期权主循环（regime 路由、底仓维护、限价下单、持仓管理）
+- **`scripts/options_paper_stats.py`**, **`scripts/options_replay_proxy.py`** — 纸面统计与简化回放代理
+- **`tests/test_options_*.py`** — 链选择、sizing、信号路由、状态持久化单元测试
+- **`docs/Options-Strategy-Document.md`** — 期权策略说明
+- **`config.yaml`** — `options_trading` 配置段（QQQ/VOO/AAPL/MSFT、stock_core、regime/chain/risk）
+
+### Changed
+- **`scripts/live/ibkr_hot_stocks.py`** — 停用，重定向至 `ibkr_options.py`；完整副本在 `archive/scripts/live/`
+- **`scripts/live/ibkr_trading_system_v8.py`** — 标记为降级（动量入场），底仓由 `UnderlyingManager` 接管
+- **`scripts/live/ibkr_trading_system_v9.py`** — 重定向至 `ibkr_options.py`
+- **`README.md`** — 期权为主架构说明
+
+### Deprecated
+- 热门股短线模块（`hot_trading` 配置保留只读，不再推荐实盘）
+
 ## [9.2.1] - 2026-06-06
 
 ### Added

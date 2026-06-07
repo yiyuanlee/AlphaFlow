@@ -1,7 +1,9 @@
 """
-AlphaFlow - 实盘交易系统 V8.1
-==============================
-参数从 config.yaml 读取，信号逻辑与回测共用 alphaflow 模块。
+AlphaFlow - 实盘交易系统 V8.1（指数动量，已降级）
+================================================
+V10 起主实盘入口为期权策略 `scripts/live/ibkr_options.py`。
+本脚本保留用于回测对齐验证；底仓维护已合并进 `ibkr_options` 的 UnderlyingManager。
+新部署请勿与 `ibkr_options.py` 同时开启动量买卖，以免与 CC 底仓冲突。
 
 用法: python scripts/live/ibkr_trading_system_v8.py
 """
