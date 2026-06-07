@@ -40,6 +40,8 @@ class OptionsExecutionParams:
     order_type: str = 'limit'
     limit_offset_pct: float = 0.02
     loop_seconds: int = 300
+    dry_run: bool = False
+    connect_timeout: int = 10
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,12 @@ class OptionsChainDataParams:
     csv_path: str = ''
     dte_min: int = 21
     dte_max: int = 45
+    fast_mode: bool = True
+    max_price_lookups: int = 4
+    max_strikes_per_expiry: int = 12
+    use_black_scholes_fallback: bool = True
+    default_iv: float = 0.22
+    replay_stride_days: int = 5
 
 
 @dataclass(frozen=True)
@@ -117,6 +125,8 @@ def options_config_from_yaml(config: dict[str, Any]) -> OptionsTradingConfig:
             order_type=execution.get('order_type', 'limit'),
             limit_offset_pct=execution.get('limit_offset_pct', 0.02),
             loop_seconds=execution.get('loop_seconds', 300),
+            dry_run=execution.get('dry_run', False),
+            connect_timeout=execution.get('connect_timeout', 10),
         ),
         strategies=OptionsStrategyToggles(
             covered_call=strategies.get('covered_call', True),
@@ -131,6 +141,12 @@ def options_config_from_yaml(config: dict[str, Any]) -> OptionsTradingConfig:
             csv_path=chain_data.get('csv_path', ''),
             dte_min=chain_data.get('dte_min', chain.get('dte_min', 21)),
             dte_max=chain_data.get('dte_max', chain.get('dte_max', 45)),
+            fast_mode=chain_data.get('fast_mode', True),
+            max_price_lookups=chain_data.get('max_price_lookups', 4),
+            max_strikes_per_expiry=chain_data.get('max_strikes_per_expiry', 12),
+            use_black_scholes_fallback=chain_data.get('use_black_scholes_fallback', True),
+            default_iv=chain_data.get('default_iv', 0.22),
+            replay_stride_days=chain_data.get('replay_stride_days', 5),
         ),
         tws_host=live.get('tws_host', '127.0.0.1'),
         tws_port=live.get('tws_port', 7497),

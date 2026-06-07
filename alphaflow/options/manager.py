@@ -66,6 +66,16 @@ class OptionsManager:
         return self._submit_order(order)
 
     def _submit_order(self, order) -> bool:
+        if self.config.execution.dry_run:
+            log_options_event(
+                'dry_run_order',
+                intent=order.intent.value,
+                symbol=order.symbol,
+                quantity=order.quantity,
+                limit_price=order.limit_price,
+                max_loss=order.max_loss,
+            )
+            return True
         if len(order.legs) == 1:
             from alphaflow.options.types import OptionQuote
 

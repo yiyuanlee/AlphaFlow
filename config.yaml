@@ -80,6 +80,8 @@ options_trading:
     order_type: limit
     limit_offset_pct: 0.02
     loop_seconds: 300
+    dry_run: false                   # true 或 --dry-run：连 IBKR 但不下单
+    connect_timeout: 10              # 连接超时（秒），避免 TWS 未开时长时间挂起
   strategies:
     covered_call: true
     cash_secured_put: true
@@ -87,9 +89,15 @@ options_trading:
     bear_call_spread: false
   chain_data:
     provider: "polygon"              # polygon | csv | yfinance
-    api_key_env: "POLYGON_API_KEY"   # 环境变量名
-    rate_limit_seconds: 0.25
+    api_key_env: "POLYGON_API_KEY"   # 环境变量名（读取 .env）
+    rate_limit_seconds: 1.0
     csv_path: ""                     # provider=csv 时填写路径
+    fast_mode: true                  # 快速模式：合约来自 Polygon，权利金用 BS 估算
+    max_price_lookups: 4             # 非 fast 时最多询价次数
+    max_strikes_per_expiry: 12
+    use_black_scholes_fallback: true
+    default_iv: 0.22
+    replay_stride_days: 10           # 快速回放每 10 个交易日评估一次开仓
   replay:
     start_date: "2023-01-01"
     end_date: "2026-06-03"

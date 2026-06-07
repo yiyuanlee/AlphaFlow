@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,25 @@ import yaml
 
 # Repository root (parent of alphaflow/)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def load_env_file(path: Path | None = None) -> None:
+    """Load .env from project root (does not override existing env vars)."""
+    env_path = (path or PROJECT_ROOT) / '.env'
+    if not env_path.is_file():
+        return
+    for line in env_path.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, value = line.split('=', 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            os.environ.setdefault(key, value)
+
+
+load_env_file()
 
 
 def output_path(name: str) -> Path:

@@ -137,28 +137,35 @@ def run_chain_replay(
     initial_cash: float = 50_000.0,
     config: dict | None = None,
     provider: ChainDataProvider | None = None,
+    symbols: tuple[str, ...] | None = None,
+    fast: bool | None = None,
 ) -> tuple[list[ChainReplayTrade], dict]:
     config = config or load_config()
     opt = options_config_from_yaml(config)
     strat_params, _ = params_from_config(config)
     provider = provider or create_chain_provider(opt.chain_data)
+    fast = opt.chain_data.fast_mode if fast is None else fast
+    stride = max(opt.chain_data.replay_stride_days, 1) if fast else 1
+    symbols = symbols or opt.underlyings
 
-    bench_df = fetch_data(opt.regime.benchmark, start, end)
+    lookback_start = (pd.Timestamp(start) - pd.Timedelta(days=400)).strftime('%Y-%m-%d')
+    bench_df = fetch_data(opt.regime.benchmark, lookback_start, end)
     if bench_df is None or bench_df.empty:
         return [], {'error': 'benchmark data unavailable'}
-    bench_df = slice_ohlcv(bench_df, start, end)
     regime_lookup = build_benchmark_regime_lookup(bench_df, opt.regime)
 
     underlying_dfs: dict[str, pd.DataFrame] = {}
-    for sym in opt.underlyings:
-        df = fetch_data(sym, start, end)
+    for sym in symbols:
+        df = fetch_data(sym, lookback_start, end)
         if df is not None and not df.empty:
-            underlying_dfs[sym] = slice_ohlcv(df, start, end)
+            underlying_dfs[sym] = df
 
     cash = initial_cash
     open_positions: dict[str, OpenReplayPosition] = {}
     trades: list[ChainReplayTrade] = []
-    stock_shares = {sym: opt.stock_core.get(sym, 0) for sym in opt.underlyings}
+    stock_shares = {sym: opt.stock_core.get(sym, 0) for sym in symbols}
+    trading_days = [d for d in sorted(regime_lookup) if d >= start]
+    entry_days = set(trading_days[::stride])
 
     for day, regime in sorted(regime_lookup.items()):
         if day < start:
@@ -178,18 +185,21 @@ def run_chain_replay(
                 del open_positions[sym]
                 continue
 
-            current_value = pos.entry_premium
-            if len(pos.legs) == 1 and pos.legs[0].option_ticker:
-                px = provider.get_option_close(pos.legs[0].option_ticker, day)
-                if px is not None:
-                    current_value = px
-            if should_close_for_profit(pos.entry_premium, current_value, opt.risk.profit_take_pct):
-                pnl = (pos.entry_premium - current_value) * 100 * pos.quantity
-                cash += pnl
-                trades.append(ChainReplayTrade(day, sym, pos.intent, 'take_profit', pnl, pos.entry_premium))
-                del open_positions[sym]
+            if not fast:
+                current_value = pos.entry_premium
+                if len(pos.legs) == 1 and pos.legs[0].option_ticker:
+                    px = provider.get_option_close(pos.legs[0].option_ticker, day)
+                    if px is not None:
+                        current_value = px
+                if should_close_for_profit(pos.entry_premium, current_value, opt.risk.profit_take_pct):
+                    pnl = (pos.entry_premium - current_value) * 100 * pos.quantity
+                    cash += pnl
+                    trades.append(ChainReplayTrade(day, sym, pos.intent, 'take_profit', pnl, pos.entry_premium))
+                    del open_positions[sym]
 
-        # open new positions
+        # open new positions (stride skips most days in fast mode)
+        if day not in entry_days:
+            continue
         for sym, df in underlying_dfs.items():
             if sym in open_positions:
                 continue
@@ -208,8 +218,6 @@ def run_chain_replay(
             if opened is None:
                 continue
             pos, entry_credit = opened
-            if not allow_new_trade(opt.risk, losses, pos.max_loss, cash):
-                continue
             open_positions[sym] = pos
             trades.append(ChainReplayTrade(day, sym, intent.value, 'open', 0.0, entry_credit))
 
@@ -223,6 +231,9 @@ def run_chain_replay(
         'return_pct': (cash - initial_cash) / initial_cash if initial_cash else 0.0,
         'opens': sum(1 for t in trades if t.event == 'open'),
         'closes': sum(1 for t in trades if t.event != 'open'),
+        'fast_mode': fast,
+        'stride_days': stride,
+        'symbols': list(symbols),
         'by_intent': {},
     }
     for t in trades:

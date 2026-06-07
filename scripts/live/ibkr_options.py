@@ -1,9 +1,12 @@
 """
 AlphaFlow - Options trading (Covered Call / CSP / Vertical Spreads)
 =================================================================
-Primary live sleeve: regime-routed options on QQQ/VOO + blue chips.
+推荐工作流（避免 IBKR 半天重登 + 长时间挂进程）:
+  python scripts/options_daily_scan.py          # 每日快扫（无需 IBKR，~10秒）
+  python scripts/live/ibkr_options.py --live      # 开盘/午盘各跑一次（连上即下单即断开）
+  python scripts/live/ibkr_options.py --live --dry-run   # 连 IBKR 但不下单，只写日志
 
-用法: python scripts/live/ibkr_options.py
+旧模式（需 TWS 常驻）: python scripts/live/ibkr_options.py --loop
 """
 
 from __future__ import annotations
@@ -27,6 +30,7 @@ from ib_insync import IB
 
 from alphaflow.config import load_config, params_from_config
 from alphaflow.data import fetch_data
+from alphaflow.options.daily_scan import format_daily_scan, run_daily_scan
 from alphaflow.options.journal import log_options_event
 from alphaflow.options.manager import OptionsManager
 from alphaflow.options.options_config import options_config_from_yaml
@@ -56,15 +60,35 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', stre
 logger = logging.getLogger(__name__)
 
 
+def _opt_config(dry_run: bool = False):
+    cfg = {
+        **CONFIG,
+        'options_trading': {
+            **CONFIG.get('options_trading', {}),
+            'execution': {
+                **CONFIG.get('options_trading', {}).get('execution', {}),
+                'dry_run': dry_run or CONFIG.get('options_trading', {}).get('execution', {}).get('dry_run', False),
+            },
+        },
+    }
+    return options_config_from_yaml(cfg)
+
+
 class OptionsTrader:
-    def __init__(self):
+    def __init__(self, dry_run: bool = False):
         self.ib = IB()
-        self.manager = OptionsManager(self.ib, OPT)
-        self.underlying_mgr = UnderlyingManager(self.ib, OPT)
+        self.opt = _opt_config(dry_run)
+        self.dry_run = self.opt.execution.dry_run
+        self.manager = OptionsManager(self.ib, self.opt)
+        self.underlying_mgr = UnderlyingManager(self.ib, self.opt)
 
     def connect(self) -> None:
-        self.ib.connect(OPT.tws_host, OPT.tws_port, clientId=OPT.client_id)
-        logger.info(f'已连接 IBKR ({OPT.tws_host}:{OPT.tws_port}, clientId={OPT.client_id})')
+        timeout = self.opt.execution.connect_timeout
+        self.ib.connect(self.opt.tws_host, self.opt.tws_port, clientId=self.opt.client_id, timeout=timeout)
+        mode = 'DRY-RUN' if self.dry_run else 'LIVE'
+        logger.info(
+            f'已连接 IBKR [{mode}] ({self.opt.tws_host}:{self.opt.tws_port}, clientId={self.opt.client_id})',
+        )
 
     def account_metrics(self) -> tuple[float, float]:
         summary = {item.tag: float(item.value) for item in self.ib.accountSummary() if item.currency == 'USD'}
@@ -73,11 +97,11 @@ class OptionsTrader:
         return cash, nlv
 
     def benchmark_regime(self):
-        benchmark = OPT.regime.benchmark
+        benchmark = self.opt.regime.benchmark
         df = fetch_data(benchmark, '2018-01-01', date.today().strftime('%Y-%m-%d'))
         if df is None or df.empty:
             raise RuntimeError(f'无法获取 {benchmark} 日线数据')
-        return compute_regime_from_df(df, OPT.regime)
+        return compute_regime_from_df(df, self.opt.regime)
 
     def run_cycle(self) -> None:
         regime = self.benchmark_regime()
@@ -86,12 +110,13 @@ class OptionsTrader:
             f'Regime={regime.regime.value} benchmark={regime.benchmark} '
             f'close={regime.close:.2f} adx={regime.adx:.1f} rsi={regime.rsi:.1f}'
         )
-        self.manager.manage_open_positions()
-        self.underlying_mgr.rebalance(cash)
-        shares = sync_stock_positions(self.ib, list(OPT.underlyings))
-        exposure = sync_option_exposure(self.ib, list(OPT.underlyings))
+        if not self.dry_run:
+            self.manager.manage_open_positions()
+            self.underlying_mgr.rebalance(cash)
+        shares = sync_stock_positions(self.ib, list(self.opt.underlyings))
+        exposure = sync_option_exposure(self.ib, list(self.opt.underlyings))
 
-        for symbol in OPT.underlyings:
+        for symbol in self.opt.underlyings:
             df = fetch_data(symbol, '2018-01-01', date.today().strftime('%Y-%m-%d'))
             if df is None or df.empty:
                 continue
@@ -108,12 +133,12 @@ class OptionsTrader:
                 p.status == 'open' and p.symbol == symbol
                 for p in self.manager.positions.values()
             )
-            intent = route_strategy(regime, underlying, OPT, has_open_option=has_open)
+            intent = route_strategy(regime, underlying, self.opt, has_open_option=has_open)
             logger.info(f'{symbol} intent={intent.value} shares={underlying.stock_shares}')
             if intent.value in ('hold', 'close', 'none'):
                 continue
             ok = self.manager.execute_intent(intent, underlying, cash, nlv)
-            log_options_event('route', symbol=symbol, intent=intent.value, executed=ok)
+            log_options_event('route', symbol=symbol, intent=intent.value, executed=ok, dry_run=self.dry_run)
 
     def run_forever(self) -> None:
         self.connect()
@@ -125,17 +150,25 @@ class OptionsTrader:
                     self.run_cycle()
                 except Exception as exc:
                     logger.exception(f'循环异常: {exc}')
-            time.sleep(OPT.execution.loop_seconds)
+            time.sleep(self.opt.execution.loop_seconds)
 
 
 def main():
-    trader = OptionsTrader()
-    if '--once' in sys.argv:
-        trader.connect()
-        trader.run_cycle()
-        trader.ib.disconnect()
+    argv = sys.argv[1:]
+    if '--loop' in argv:
+        OptionsTrader(dry_run='--dry-run' in argv).run_forever()
         return
-    trader.run_forever()
+    if '--live' in argv or '--once' in argv:
+        trader = OptionsTrader(dry_run='--dry-run' in argv)
+        try:
+            trader.connect()
+            trader.run_cycle()
+        finally:
+            trader.ib.disconnect()
+        return
+    # 默认：离线快扫，无需 IBKR
+    report = run_daily_scan()
+    print(format_daily_scan(report))
 
 
 if __name__ == '__main__':

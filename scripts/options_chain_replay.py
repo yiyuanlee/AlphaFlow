@@ -1,9 +1,7 @@
 """
 AlphaFlow - Options replay with historical chain data
 用法:
-  set POLYGON_API_KEY=your_key
-  python scripts/options_chain_replay.py
-  python scripts/options_chain_replay.py --provider csv --csv data/sample_options_chain.csv
+  python scripts/options_chain_replay.py --fast --symbol QQQ --start 2025-01-01 --end 2025-03-31
 """
 
 from __future__ import annotations
@@ -11,6 +9,7 @@ from __future__ import annotations
 import argparse
 import io
 import sys
+from dataclasses import replace
 
 from _bootstrap import setup_path
 
@@ -19,7 +18,7 @@ setup_path(__file__)
 from alphaflow.config import load_config
 from alphaflow.options.chain_data.base import create_chain_provider
 from alphaflow.options.chain_replay import run_chain_replay
-from alphaflow.options.options_config import OptionsChainDataParams, options_config_from_yaml
+from alphaflow.options.options_config import options_config_from_yaml
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
@@ -30,6 +29,9 @@ def main():
     parser.add_argument('--csv', default=None, help='CSV path when provider=csv')
     parser.add_argument('--start', default=None)
     parser.add_argument('--end', default=None)
+    parser.add_argument('--symbol', default=None, help='Single underlying, e.g. QQQ')
+    parser.add_argument('--fast', action='store_true', help='Fast mode: BS pricing, stride entries')
+    parser.add_argument('--full', action='store_true', help='Disable fast mode (more API calls)')
     args = parser.parse_args()
 
     config = load_config()
@@ -40,18 +42,22 @@ def main():
     cash = float(replay.get('initial_cash', 50_000))
 
     chain_data = opt.chain_data
-    if args.provider or args.csv:
-        chain_data = OptionsChainDataParams(
-            provider=args.provider or chain_data.provider,
-            api_key_env=chain_data.api_key_env,
-            rate_limit_seconds=chain_data.rate_limit_seconds,
-            csv_path=args.csv or chain_data.csv_path,
-            dte_min=chain_data.dte_min,
-            dte_max=chain_data.dte_max,
-        )
+    overrides = {}
+    if args.provider:
+        overrides['provider'] = args.provider
+    if args.csv:
+        overrides['csv_path'] = args.csv
+    if args.fast:
+        overrides['fast_mode'] = True
+    if args.full:
+        overrides['fast_mode'] = False
+    if overrides:
+        chain_data = replace(chain_data, **overrides)
 
+    symbols = (args.symbol,) if args.symbol else None
+    fast = None if not args.fast and not args.full else chain_data.fast_mode
     provider = create_chain_provider(chain_data)
-    trades, summary = run_chain_replay(start, end, cash, config, provider)
+    trades, summary = run_chain_replay(start, end, cash, config, provider, symbols=symbols, fast=fast)
 
     if summary.get('error'):
         print(f"Error: {summary['error']}")
@@ -59,6 +65,8 @@ def main():
 
     print('=== Options Chain Replay ===')
     print(f"Provider: {chain_data.provider}")
+    print(f"Fast mode: {summary.get('fast_mode', False)} | Stride: {summary.get('stride_days', 1)}d")
+    print(f"Symbols: {', '.join(summary.get('symbols', []))}")
     print(f"Period: {summary['start']} -> {summary['end']}")
     print(f"Opens: {summary['opens']} | Closes: {summary['closes']}")
     print(f"Total PnL: ${summary['total_pnl']:,.2f}")
