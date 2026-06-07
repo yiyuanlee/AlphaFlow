@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [10.1.0] - 2026-06-06
+
+### Added
+- **`alphaflow/options/chain_data/`** — Pluggable chain providers: Polygon (historical), CSV (offline), yfinance (live snapshot)
+- **`alphaflow/options/chain_replay.py`** — Replay with real chain premiums, 50% take-profit, expiry settlement
+- **`scripts/options_chain_replay.py`**, **`scripts/download_options_chain.py`** — Chain replay CLI and Polygon cache prefetch
+- **`tests/test_options_chain_data.py`**, **`tests/test_options_chain_replay.py`**
+- **`config.yaml`** — `options_trading.chain_data` section
+
 ## [10.0.0] - 2026-06-06
 
 ### Added

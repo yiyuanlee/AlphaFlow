@@ -34,6 +34,11 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 python scripts/live/ibkr_options.py --once   # 单轮（调试）
 python scripts/options_paper_stats.py        # 纸面统计
 python scripts/options_replay_proxy.py       # 路由代理回放（非链级 PnL）
+
+# 期权链历史回放（需 POLYGON_API_KEY 或 CSV）
+set POLYGON_API_KEY=your_key
+python scripts/download_options_chain.py --symbol QQQ --start 2024-01-01 --end 2024-06-30
+python scripts/options_chain_replay.py --start 2024-01-01 --end 2024-06-30
 ```
 
 详见 [`docs/Options-Strategy-Document.md`](docs/Options-Strategy-Document.md)。

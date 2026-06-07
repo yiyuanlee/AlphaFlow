@@ -1,6 +1,7 @@
 """Tests for options strategy routing."""
 
 from alphaflow.options.options_config import (
+    OptionsChainDataParams,
     OptionsChainParams,
     OptionsExecutionParams,
     OptionsRegimeParams,
@@ -20,6 +21,7 @@ def _config(**kwargs) -> OptionsTradingConfig:
         risk=OptionsRiskParams(),
         execution=OptionsExecutionParams(),
         strategies=OptionsStrategyToggles(**kwargs),
+        chain_data=OptionsChainDataParams(provider='csv'),
     )
 
 

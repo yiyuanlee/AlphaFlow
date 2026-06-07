@@ -49,6 +49,42 @@ Per-strategy toggles in `options_trading.strategies`.
 - State: `state/options_positions.json`
 - Proxy replay (routing only, **not** chain-accurate PnL): `python scripts/options_replay_proxy.py`
 
+## Historical chain replay
+
+Chain data providers (`options_trading.chain_data`):
+
+| Provider | Use case |
+|----------|----------|
+| `polygon` | Contracts + daily close via plan-included endpoints (no Snapshots) |
+| `csv` | Offline replay from exported chain rows |
+| `yfinance` | **Current** chain snapshot only (not historical) |
+
+```bash
+# Prefetch Polygon cache (recommended before long replays)
+set POLYGON_API_KEY=your_key
+python scripts/download_options_chain.py --symbol QQQ --start 2024-01-01 --end 2024-06-30
+
+# Chain-accurate replay
+python scripts/options_chain_replay.py --start 2024-01-01 --end 2024-06-30
+
+# CSV offline
+python scripts/options_chain_replay.py --provider csv --csv data/options_chain.csv
+```
+
+Cache directory: `output/options_chain_cache/`
+
+### Polygon endpoints used (base Options plan)
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /v3/reference/options/contracts` | Contract list with `as_of` date |
+| `GET /v1/open-close/{optionsTicker}/{date}` | Daily option close (primary) |
+| `GET /v2/aggs/ticker/.../range/1/day/...` | Fallback OHLC for underlying + options |
+
+**Not used** (not on base plan): `GET /v3/snapshot/options/...`
+
+Delta is computed locally via Black-Scholes when Polygon does not return greeks.
+
 ## Requirements
 
 - IBKR **margin** account with options permissions

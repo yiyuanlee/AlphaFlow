@@ -85,6 +85,11 @@ options_trading:
     cash_secured_put: true
     bull_put_spread: true
     bear_call_spread: false
+  chain_data:
+    provider: "polygon"              # polygon | csv | yfinance
+    api_key_env: "POLYGON_API_KEY"   # 环境变量名
+    rate_limit_seconds: 0.25
+    csv_path: ""                     # provider=csv 时填写路径
   replay:
     start_date: "2023-01-01"
     end_date: "2026-06-03"

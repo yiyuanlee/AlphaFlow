@@ -43,6 +43,16 @@ class OptionsExecutionParams:
 
 
 @dataclass(frozen=True)
+class OptionsChainDataParams:
+    provider: str = 'polygon'
+    api_key_env: str = 'POLYGON_API_KEY'
+    rate_limit_seconds: float = 0.25
+    csv_path: str = ''
+    dte_min: int = 21
+    dte_max: int = 45
+
+
+@dataclass(frozen=True)
 class OptionsStrategyToggles:
     covered_call: bool = True
     cash_secured_put: bool = True
@@ -57,6 +67,7 @@ class OptionsTradingConfig:
     risk: OptionsRiskParams
     execution: OptionsExecutionParams
     strategies: OptionsStrategyToggles
+    chain_data: OptionsChainDataParams
     client_id: int = 3
     underlyings: tuple[str, ...] = ('QQQ', 'VOO', 'AAPL', 'MSFT')
     stock_core: dict[str, int] = field(default_factory=lambda: {'QQQ': 100, 'VOO': 0, 'AAPL': 0, 'MSFT': 0})
@@ -72,6 +83,7 @@ def options_config_from_yaml(config: dict[str, Any]) -> OptionsTradingConfig:
     risk = o.get('risk', {})
     execution = o.get('execution', {})
     strategies = o.get('strategies', {})
+    chain_data = o.get('chain_data', {})
     stock_core_raw = o.get('stock_core', {'QQQ': 100, 'VOO': 0, 'AAPL': 0, 'MSFT': 0})
 
     return OptionsTradingConfig(
@@ -111,6 +123,14 @@ def options_config_from_yaml(config: dict[str, Any]) -> OptionsTradingConfig:
             cash_secured_put=strategies.get('cash_secured_put', True),
             bull_put_spread=strategies.get('bull_put_spread', True),
             bear_call_spread=strategies.get('bear_call_spread', False),
+        ),
+        chain_data=OptionsChainDataParams(
+            provider=chain_data.get('provider', 'polygon'),
+            api_key_env=chain_data.get('api_key_env', 'POLYGON_API_KEY'),
+            rate_limit_seconds=chain_data.get('rate_limit_seconds', 0.25),
+            csv_path=chain_data.get('csv_path', ''),
+            dte_min=chain_data.get('dte_min', chain.get('dte_min', 21)),
+            dte_max=chain_data.get('dte_max', chain.get('dte_max', 45)),
         ),
         tws_host=live.get('tws_host', '127.0.0.1'),
         tws_port=live.get('tws_port', 7497),
