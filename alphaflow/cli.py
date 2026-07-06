@@ -51,7 +51,7 @@ def _cmd_backtest_run(_args: argparse.Namespace) -> int:
 
 
 def _cmd_research_walk_forward(args: argparse.Namespace) -> int:
-    from alphaflow.walkforward import (
+    from alphaflow.research.walkforward import (
         print_walk_forward_summary,
         run_walk_forward,
         save_walk_forward_results,
@@ -78,7 +78,7 @@ def _cmd_research_optimize(_args: argparse.Namespace) -> int:
 
 
 def _cmd_research_verify(args: argparse.Namespace) -> int:
-    from alphaflow.parity import run_parity_check
+    from alphaflow.research.parity import run_parity_check
 
     config = load_config(args.config)
     tickers = args.ticker or ["QQQ", "VOO"]

@@ -117,11 +117,11 @@ options/state.py, options/journal.py, hot_journal.py, V8  →  delegate to core
 
 ## Phase 1 — 核心层抽取（原 PR #2 计划，已合并上方）<!-- legacy anchor -->
 
-## Phase 2 — 策略子包化（PR #3，中风险）
+## Phase 2 — 策略子包化 ✅
 
 **目标：** 目录反映策略生命周期；指数策略真正复用 `signals.py`。
 
-### 2.1 移动文件（保留 re-export 兼容层）
+### 2.1 移动文件（保留 re-export 兼容层）✅
 
 | 现路径 | 新路径 |
 |--------|--------|
@@ -133,35 +133,32 @@ options/state.py, options/journal.py, hot_journal.py, V8  →  delegate to core
 | `alphaflow/grid.py` | `alphaflow/research/grid.py` |
 | `alphaflow/parity.py` | `alphaflow/research/parity.py` |
 
-根目录 `alphaflow/signals.py` 等保留：
+根目录保留 compat shim（`from alphaflow.equity.signals import *` 等）。
 
-```python
-# alphaflow/signals.py (compat shim, deprecated)
-from alphaflow.equity.signals import *  # noqa: F403
-```
+### 2.2 回测复用共享信号 ✅
 
-### 2.2 回测复用共享信号
+`AlphaFlowStrategy.next()` 调用 `equity.signals.check_entry/check_exit/calc_position_size`。
 
-`AlphaFlowStrategy.next()` 改为调用 `equity.signals.check_entry/check_exit/calc_position_size`，删除 `_should_enter/_should_exit` 重复逻辑。
+新增 `tests/test_signal_parity.py` 与 `alphaflow/equity/signal_parity.py`。
 
-新增 `tests/equity/test_signal_parity.py`：同一 OHLCV 上 Backtrader 成交时点 vs 纯函数信号一致。
-
-### 2.3 配置拆分
+### 2.3 配置拆分 ✅
 
 ```
-config/default.yaml    # backtest, live 连接
-config/options.yaml    # options_trading（主 profile）
-config/equity.yaml     # strategy, risk, index_tickers
-config/hot.yaml        # hot_trading, archived: true
+config/default.yaml    # backtest, live
+config/equity.yaml     # strategy, risk, tickers, walk_forward
+config/options.yaml    # options_trading
+config/hot.yaml        # hot_trading (archived)
 ```
 
-```python
-load_config(profile="options")  # default for live
-```
+`load_config(profile="options")` 加载指定 profile；默认合并全部 profile。
 
-**验收：** 新旧 import 均可用；signal parity 测试通过；README 更新 Current Workflow。
+根目录 `config.yaml` 保留作 fallback。
+
+**验收：** 新旧 import 均可用；signal parity 测试通过。
 
 ---
+
+## Phase 2 — 策略子包化（原 PR #3 计划，已合并上方）<!-- legacy anchor -->
 
 ## Phase 3 — CLI 完全内化 + 编排（PR #4）
 

@@ -12,6 +12,27 @@ import yaml
 
 # Repository root (parent of alphaflow/)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+CONFIG_DIR = PROJECT_ROOT / "config"
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    with open(path, "r", encoding="utf-8") as handle:
+        data = yaml.safe_load(handle)
+    return data if isinstance(data, dict) else {}
+
+
+def _deep_merge(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in overlay.items():
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _is_project_root(directory: Path) -> bool:
+    return (directory / "config.yaml").is_file() or (directory / "config" / "default.yaml").is_file()
 
 
 def load_env_file(path: Path | None = None) -> None:
@@ -39,7 +60,7 @@ def setup_project(caller_file: str | Path | None = None) -> Path:
     if caller_file is not None:
         start = Path(caller_file).resolve().parent
         for directory in (start, *start.parents):
-            if (directory / "config.yaml").is_file():
+            if _is_project_root(directory):
                 load_env_file(directory)
                 root = str(directory)
                 if root not in sys.path:
@@ -73,6 +94,9 @@ def state_path(name: str) -> Path:
 
 
 def default_config_path() -> Path:
+    split_default = CONFIG_DIR / "default.yaml"
+    if split_default.is_file():
+        return split_default
     return PROJECT_ROOT / "config.yaml"
 
 
@@ -101,10 +125,26 @@ class RiskParams:
     index_multiplier: float = 3.0
 
 
-def load_config(path: str | Path | None = None) -> dict[str, Any]:
-    config_file = Path(path) if path is not None else default_config_path()
-    with open(config_file, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+def load_config(path: str | Path | None = None, profile: str | None = None) -> dict[str, Any]:
+    """Load configuration from a file or merged ``config/`` profiles."""
+    if path is not None:
+        return _load_yaml(Path(path))
+
+    split_default = CONFIG_DIR / "default.yaml"
+    if split_default.is_file():
+        config = _load_yaml(split_default)
+        if profile:
+            profile_path = CONFIG_DIR / f"{profile}.yaml"
+            if profile_path.is_file():
+                config = _deep_merge(config, _load_yaml(profile_path))
+        else:
+            for name in ("equity", "options", "hot"):
+                overlay_path = CONFIG_DIR / f"{name}.yaml"
+                if overlay_path.is_file():
+                    config = _deep_merge(config, _load_yaml(overlay_path))
+        return config
+
+    return _load_yaml(PROJECT_ROOT / "config.yaml")
 
 
 def params_from_config(config: dict[str, Any]) -> tuple[StrategyParams, RiskParams]:

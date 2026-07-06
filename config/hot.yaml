@@ -1,0 +1,50 @@
+# Hot-stock momentum (V9, archived — not recommended for live)
+archived: true
+
+hot_trading:
+  client_id: 2
+  loop_seconds: 60
+  exclude_symbols: ["VOO", "QQQ", "SPY", "IWM"]
+  scanner:
+    scan_code: "TOP_PERC_GAIN"
+    location_code: "STK.US.MAJOR"
+    min_price: 10.0
+    min_volume: 1000000
+    max_results: 15
+    rescan_minutes: 15
+  position:
+    max_hold_days: 5
+    max_positions: 5
+    max_single_position_pct: 0.10
+  market_filter:
+    benchmark: "QQQ"
+    trend_period: 200
+    require_bull_market: true
+  entry:
+    fast_ema: 9
+    slow_ema: 21
+    rsi_period: 14
+    rsi_max: 70
+    require_above_vwap: true
+    require_golden_cross: true
+    adx_period: 14
+    min_adx: 20
+    rel_volume_period: 20
+    min_rel_volume: 1.2
+    require_bull_market: true
+  exit:
+    take_profit_pct: 0.05
+    stop_loss_pct: 0.04
+    use_ema_cross: true
+    use_vwap_break: true
+    force_exit_on_max_hold: true
+  risk:
+    stock_pool_pct: 0.40
+    risk_per_trade: 0.02
+    pool_drawdown_halt_pct: 0.05
+  replay:
+    start_date: "2023-01-01"
+    end_date: "2026-06-03"
+    initial_cash: 20000.0
+    commission: 0.001
+    grid_objective: balanced

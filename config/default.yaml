@@ -1,0 +1,12 @@
+# Shared infrastructure
+backtest:
+  initial_cash: 50000.0
+  commission: 0.001
+  start_date: "2010-01-01"
+  end_date: "2026-06-03"
+
+live:
+  tws_host: "127.0.0.1"
+  tws_port: 7497
+  client_id: 1
+  scan_interval_seconds: 3600
