@@ -2,30 +2,18 @@
 
 from __future__ import annotations
 
-import json
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from alphaflow.config import output_path
+from alphaflow.core.persistence.journal import append_event, load_events
 
-DEFAULT_LOG = output_path('hot_paper_trades.jsonl')
+DEFAULT_LOG = output_path("hot_paper_trades.jsonl")
 
 
 def log_hot_event(event: str, log_file: Path | None = None, **fields: Any) -> None:
-    path = log_file or DEFAULT_LOG
-    record = {'ts': datetime.now().isoformat(), 'event': event, **fields}
-    with open(path, 'a', encoding='utf-8') as f:
-        f.write(json.dumps(record, ensure_ascii=False) + '\n')
+    append_event(log_file or DEFAULT_LOG, event, **fields)
 
 
 def load_hot_events(log_file: Path | None = None) -> list[dict[str, Any]]:
-    path = log_file or DEFAULT_LOG
-    if not path.exists():
-        return []
-    events = []
-    for line in path.read_text(encoding='utf-8').splitlines():
-        line = line.strip()
-        if line:
-            events.append(json.loads(line))
-    return events
+    return load_events(log_file or DEFAULT_LOG)

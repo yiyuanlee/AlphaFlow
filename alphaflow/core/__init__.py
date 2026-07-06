@@ -1,7 +1,4 @@
-"""Configuration loading and typed parameter objects (compat re-export).
-
-Prefer ``alphaflow.core.config`` for new code.
-"""
+"""AlphaFlow core infrastructure (config, data, persistence)."""
 
 from alphaflow.core.config import (
     PROJECT_ROOT,

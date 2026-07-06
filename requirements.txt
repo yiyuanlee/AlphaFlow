@@ -1,5 +1,7 @@
 # AlphaFlow Dependencies
 # ========================
+# Prefer: pip install -e ".[dev]"  (see pyproject.toml)
+# This file is kept for backward compatibility with README quick-start.
 
 # Core backtesting
 backtrader>=1.9.78
