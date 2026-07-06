@@ -11,7 +11,6 @@ V10 起主实盘入口为期权策略 `scripts/live/ibkr_options.py`。
 import asyncio
 import sys
 import io
-import json
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -35,6 +34,7 @@ import ib_insync.util as util
 
 from alphaflow.config import load_config, params_from_config, state_path
 from alphaflow.constants import is_index
+from alphaflow.core.persistence.state import load_json, save_json
 from alphaflow.indicators import compute_indicators
 from alphaflow.signals import (
     PositionState,
@@ -73,17 +73,15 @@ class LiveSystemV8:
     def save_state(self):
         state = {'peak_prices': self.peak_prices, 'stop_prices': self.stop_prices}
         try:
-            with open(self.state_file_path, 'w', encoding='utf-8') as f:
-                json.dump(state, f, indent=4)
+            save_json(self.state_file_path, state, indent=4)
             logger.info(f"💾 交易状态已成功保存至 {self.state_file_path}")
         except Exception as e:
             logger.error(f"❌ 保存交易状态失败: {e}")
 
     def load_state(self):
-        if Path(self.state_file_path).exists():
+        state = load_json(self.state_file_path, default=None)
+        if state is not None:
             try:
-                with open(self.state_file_path, 'r', encoding='utf-8') as f:
-                    state = json.load(f)
                 self.peak_prices = state.get('peak_prices', {})
                 self.stop_prices = state.get('stop_prices', {})
                 logger.info(f"💾 成功从 {self.state_file_path} 加载历史状态！")

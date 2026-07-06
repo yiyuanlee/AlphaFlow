@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "alphaflow"
+version = "10.0.0"
+description = "Automated quantitative trading system for Interactive Brokers (IBKR)"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "yiyuanlee" }]
+keywords = ["quantitative", "trading", "ibkr", "backtrader", "options"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+    "backtrader>=1.9.78",
+    "yfinance>=0.2.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "matplotlib>=3.7.0",
+    "pyyaml>=6.0",
+    "ib_insync>=0.9.0",
+    "pytz>=2024.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "tqdm>=4.0",
+]
+
+[project.scripts]
+alphaflow = "alphaflow.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yiyuanlee/AlphaFlow"
+Repository = "https://github.com/yiyuanlee/AlphaFlow"
+Issues = "https://github.com/yiyuanlee/AlphaFlow/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["alphaflow*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v"
+filterwarnings = ["ignore::DeprecationWarning"]

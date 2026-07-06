@@ -1,0 +1,67 @@
+# Equity trend-following (V8, deprecated for new live deployments)
+strategy:
+  fast_period: 10
+  slow_period: 25
+  trend_period: 200
+  rsi_period: 14
+  rsi_upper: 65
+  adx_period: 14
+  adx_threshold: 20
+  atr_period: 14
+  atr_multiplier: 2.5
+  vol_filter_period: 100
+  vol_filter_ratio: 0.8
+  trailing_atr_mult: 3.0
+  trailing_stop: 0.12
+
+risk:
+  risk_per_trade: 0.030
+  alloc_index: 0.60
+  alloc_stock: 0.40
+  index_multiplier: 3.0
+
+index_tickers:
+  - "QQQ"
+  - "VOO"
+
+walk_forward:
+  mode: holdout
+  scope: single
+  objective: sharpe
+  top_k_train: 10
+  quick_grid: false
+  tickers:
+    - "VOO"
+    - "QQQ"
+  holdout:
+    train_start: "2010-01-01"
+    train_end: "2020-12-31"
+    val_start: "2021-01-01"
+    val_end: "2023-12-31"
+    test_start: "2024-01-01"
+    test_end: "2026-06-03"
+  rolling:
+    train_years: 5
+    test_years: 1
+    step_years: 1
+    data_start: "2010-01-01"
+    data_end: "2026-06-03"
+
+tickers:
+  - "QQQ"
+  - "VOO"
+  - "NVDA"
+  - "AMD"
+  - "TSLA"
+  - "COIN"
+  - "PLTR"
+  - "MSTR"
+  - "SMCI"
+  - "CRWD"
+  - "UPST"
+  - "CVNA"
+  - "SHOP"
+  - "XYZ"
+  - "MARA"
+  - "APP"
+  - "NET"

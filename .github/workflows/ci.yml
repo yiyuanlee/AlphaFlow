@@ -21,18 +21,25 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Install package (editable) with dev extras
         run: |
           python -m pip install --upgrade pip
-          pip install backtrader yfinance pandas numpy matplotlib pyyaml pytest
+          pip install -e ".[dev]"
 
       - name: Check imports (shared strategy modules)
         run: |
-          python -c "from alphaflow.strategy import AlphaFlowStrategy; print('alphaflow.strategy OK')"
-          python -c "from alphaflow.signals import check_entry, check_exit; print('alphaflow.signals OK')"
-          python -c "from alphaflow.backtest import run_portfolio_backtest; print('alphaflow.backtest OK')"
-          python -c "from alphaflow.walkforward import run_walk_forward; print('alphaflow.walkforward OK')"
-          python -c "from alphaflow.parity import run_parity_check; print('alphaflow.parity OK')"
+          python -c "from alphaflow.core.config import setup_project, PROJECT_ROOT; print('core.config OK')"
+          python -c "from alphaflow.core.data import fetch_data; print('core.data OK')"
+          python -c "from alphaflow.core.persistence import save_json, append_event; print('core.persistence OK')"
+          python -c "from alphaflow.equity.signals import check_entry, check_exit; print('equity.signals OK')"
+          python -c "from alphaflow.equity.backtest import AlphaFlowStrategy; print('equity.backtest OK')"
+          python -c "from alphaflow.research.parity import run_parity_check; print('research.parity OK')"
+          python -c "from alphaflow.cli import build_parser; print('alphaflow.cli OK')"
+
+      - name: Verify CLI entry point
+        run: |
+          alphaflow --help
+          alphaflow options --help
 
       - name: Run unit tests (skip IBKR live tests)
         run: |
