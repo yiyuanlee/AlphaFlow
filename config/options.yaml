@@ -1,4 +1,4 @@
-# Options strategy (V10 primary live path)
+# Options strategy (V10 legacy compatibility profile)
 options_trading:
   client_id: 3
   underlyings: ["QQQ", "VOO", "AAPL", "MSFT"]
@@ -31,7 +31,8 @@ options_trading:
     order_type: limit
     limit_offset_pct: 0.02
     loop_seconds: 300
-    dry_run: false
+    # Legacy V10 execution is disabled by default. Use paper_qqq_cc for V11.
+    dry_run: true
     connect_timeout: 10
   strategies:
     covered_call: true

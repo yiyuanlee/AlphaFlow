@@ -19,7 +19,7 @@ from alphaflow.options.sizing import allow_new_trade, size_vertical_spread, vert
 from alphaflow.options.types import StrategyIntent, StrategyOrder
 
 if TYPE_CHECKING:
-    from ib_insync import IB
+    from ib_async import IB
 
 
 def build_bull_put_spread_order(

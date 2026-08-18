@@ -24,9 +24,9 @@ from _bootstrap import setup_path
 
 setup_path(__file__)
 
-import ib_insync.util as util
+import ib_async.util as util
 import pytz
-from ib_insync import IB
+from ib_async import IB
 
 from alphaflow.config import load_config, params_from_config
 from alphaflow.data import fetch_data

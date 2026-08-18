@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **V11 unattended paper runtime** — QQQ-only covered call, exact paper-account allowlist, five-session shadow gate, HALT circuit breaker, Telegram alerts, and Windows watchdog.
+- **Transactional broker state** — SQLite WAL order/fill/position/cycle records, deterministic `orderRef`, startup reconciliation, and duplicate-order recovery.
+- **Safe lifecycle management** — real executable quote take-profit, 7-DTE buy-to-close, OTM/liquidity/freshness filters, and collateral enforcement.
+
+### Changed
+- Migrated active IBKR integrations from archived `ib_insync` to `ib_async==2.1.0`.
+- Legacy V10 execution and the old scheduled runner are dry-run by default.
+
 ## [10.1.0] - 2026-06-06
 
 ### Added

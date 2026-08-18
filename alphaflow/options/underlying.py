@@ -14,7 +14,7 @@ from alphaflow.options.options_config import OptionsTradingConfig
 from alphaflow.options.types import UnderlyingSnapshot
 
 if TYPE_CHECKING:
-    from ib_insync import IB
+    from ib_async import IB
 
 
 def fetch_underlying_daily(symbol: str, lookback_days: int = 400) -> pd.DataFrame | None:
@@ -99,7 +99,7 @@ class UnderlyingManager:
         self.config = config
 
     def rebalance(self, available_cash: float) -> list[dict[str, Any]]:
-        from ib_insync import MarketOrder, Stock
+        from ib_async import MarketOrder, Stock
 
         actions: list[dict[str, Any]] = []
         shares = sync_stock_positions(self.ib, list(self.config.underlyings))

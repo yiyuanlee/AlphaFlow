@@ -1,5 +1,9 @@
 # AlphaFlow Options Strategy (V10)
 
+> **Legacy:** V11 uses the fail-closed QQQ-only paper runtime documented in
+> [`V11-UNATTENDED-PAPER.md`](V11-UNATTENDED-PAPER.md). V10 order submission is
+> disabled by default and this document is retained for research compatibility.
+
 ## Overview
 
 AlphaFlow V10 shifts the primary live sleeve from equity momentum to **options income and defined-risk spreads** on:

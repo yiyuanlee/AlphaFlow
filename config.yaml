@@ -80,7 +80,7 @@ options_trading:
     order_type: limit
     limit_offset_pct: 0.02
     loop_seconds: 300
-    dry_run: false                   # true 或 --dry-run：连 IBKR 但不下单
+    dry_run: true                    # V10 legacy 入口默认禁止下单
     connect_timeout: 10              # 连接超时（秒），避免 TWS 未开时长时间挂起
   strategies:
     covered_call: true

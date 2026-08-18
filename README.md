@@ -17,23 +17,25 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 * **回测框架**: [Backtrader](https://www.backtrader.com/)
 * **共享策略模块**: `alphaflow/`（回测、优化、实盘共用同一套信号逻辑）
 * **数据源**: Yahoo Finance (yfinance)
-* **实盘对接**: IBKR API (ib_insync) ✅ 已实现
+* **实盘对接**: IBKR API (ib_async) ✅ 已实现
 * **配置文件**: config.yaml（参数集中管理）
 
-### 🧠 实盘架构（V10：期权为主）
+### 🧠 无人值守架构（V11：模拟盘安全试点）
 
 | 策略 | 脚本 | client_id | 标的 | 说明 |
 |------|------|-----------|------|------|
-| **期权主策略** | `scripts/live/ibkr_options.py` | 3 | QQQ / VOO / AAPL / MSFT | CC / CSP / 垂直价差，按 QQQ regime 路由 |
-| **指数动量（降级）** | `scripts/live/ibkr_trading_system_v8.py` | 1 | QQQ / VOO | 仅保留回测对齐；勿与期权脚本并行开仓 |
+| **V11 无人值守模拟盘** | `alphaflow options run --profile paper_qqq_cc --daemon` | 3 | QQQ | 100 股人工底仓 + 最多 1 张 Covered Call |
+| **V10 期权路由（降级）** | `scripts/live/ibkr_options.py` | 3 | QQQ / VOO / AAPL / MSFT | 默认强制 dry-run，不再作为自动下单入口 |
+| **指数动量（降级）** | `scripts/live/ibkr_trading_system_v8.py` | 1 | QQQ / VOO | 仅保留回测对齐 |
 | ~~热门股短线~~ | ~~`ibkr_hot_stocks.py`~~ | — | — | **已停用**，归档于 `archive/scripts/live/` |
 
-期权策略在 `config.yaml` → `options_trading` 配置 DTE、delta 目标、风控与策略开关。底仓 (`stock_core`) 由 `UnderlyingManager` 维护，供 Covered Call 使用。
+V11 只允许连接环境变量 `IBKR_PAPER_ACCOUNT` 指定的 `DU...` 模拟账户，以 IB Gateway 持仓和订单为事实来源。系统使用 SQLite 事务状态、HALT 熔断、Telegram 告警和独立心跳 watchdog；不会自动买卖 QQQ 底仓。
 
 ```bash
-python scripts/live/ibkr_options.py --once   # 单轮（调试）
-python scripts/options_paper_stats.py        # 纸面统计
-python scripts/options_replay_proxy.py       # 路由代理回放（非链级 PnL）
+alphaflow options doctor --profile paper_qqq_cc
+alphaflow options run --profile paper_qqq_cc --daemon
+alphaflow options status --profile paper_qqq_cc --json
+alphaflow options halt --profile paper_qqq_cc --reason "manual maintenance"
 
 # 期权链历史回放（需 POLYGON_API_KEY 或 CSV）
 set POLYGON_API_KEY=your_key
@@ -41,14 +43,15 @@ python scripts/download_options_chain.py --symbol QQQ --start 2024-01-01 --end 2
 python scripts/options_chain_replay.py --start 2024-01-01 --end 2024-06-30
 ```
 
-详见 [`docs/Options-Strategy-Document.md`](docs/Options-Strategy-Document.md)。
+部署、影子运行和 60 日验收步骤详见 [`docs/V11-UNATTENDED-PAPER.md`](docs/V11-UNATTENDED-PAPER.md)。
 
 ### 📋 标的与资金池说明
 
 | 配置项 | 用途 | 说明 |
 |--------|------|------|
 | `index_tickers` | **V8 实盘** | 固定 QQQ / VOO，占用 `alloc_index` 60% 资金池 |
-| `options_trading` | **期权实盘（主）** | QQQ/VOO/AAPL/MSFT，`stock_core` 底仓，regime 路由 CC/CSP/价差 |
+| `unattended_paper` | **V11 主运行路径** | QQQ 单标的 Covered Call，模拟盘限定 |
+| `options_trading` | V10 兼容 | 历史 CC/CSP/价差路由，默认 dry-run |
 | `hot_trading` | ~~热门股实盘~~ | **已停用**（配置保留只读） |
 | `tickers` | **历史回测** | 17 只固定名单，仅用于 `scripts/backtest_main.py` 组合/单标的回测 |
 | `walk_forward.tickers` | **样本外验证** | 默认 VOO / QQQ，`python scripts/walk_forward.py` |
@@ -188,24 +191,27 @@ AlphaFlow aims to implement trend-following strategies in the US stock market wh
 * **Backtesting**: [Backtrader](https://www.backtrader.com/)
 * **Shared Strategy Module**: `alphaflow/` (same signal logic for backtest, optimize, and live)
 * **Data Source**: Yahoo Finance (yfinance)
-* **Live Trading**: IBKR API (ib_insync) ✅
+* **Live Trading**: IBKR API (ib_async) ✅
 * **Config**: config.yaml (centralized parameters)
 
-### 🧠 Dual-Strategy Architecture (Index + Hot Stocks)
+### 🧠 V11 Unattended Paper Architecture
 
 | Strategy | Script | Capital Pool | Universe | Max Hold |
 |----------|--------|--------------|----------|----------|
-| **Index trend** | `scripts/live/ibkr_trading_system_v8.py` | 60% | QQQ / VOO | days–months |
-| **Hot momentum** | `scripts/live/ibkr_hot_stocks.py` | 40% | IBKR daily scanner | **≤ 5 days** |
+| **V11 unattended paper** | `alphaflow options run --profile paper_qqq_cc --daemon` | One covered lot | QQQ | 21–45 DTE |
+| **V10 options router** | `scripts/live/ibkr_options.py` | Legacy dry-run | QQQ / VOO / AAPL / MSFT | Deprecated for orders |
+| **V8 equity trend** | `scripts/live/ibkr_trading_system_v8.py` | Backtest compatibility | QQQ / VOO | Deprecated for orders |
 
-Hot-stock entries use the IBKR `TOP_PERC_GAIN` scanner every 15 minutes; no fixed ticker list.
+V11 requires 100 QQQ shares to be placed manually in the exact configured IBKR paper account. It opens at most one covered call, persists broker-reconciled state in SQLite, and fails closed on account, collateral, order, quote, or position mismatches.
 
 ### 📋 Tickers & Capital Pools
 
 | Config key | Used by | Notes |
 |------------|---------|-------|
-| `index_tickers` | **V8 live** | Fixed QQQ / VOO, `alloc_index` 60% pool |
-| `hot_trading` | **Hot-stock live** | Dynamic scanner universe, `alloc_stock` 40%, max 5-day hold |
+| `unattended_paper` | **V11 primary** | QQQ-only covered-call paper pilot |
+| `options_trading` | V10 compatibility | Legacy router, forced dry-run by default |
+| `index_tickers` | V8 compatibility | Historical equity trend configuration |
+| `hot_trading` | Archived | Dynamic scanner retained for research only |
 | `tickers` | **Historical backtest** | 17-name fixed list for `scripts/backtest_main.py` only |
 | `walk_forward.tickers` | **Out-of-sample test** | Default VOO / QQQ via `scripts/walk_forward.py` |
 

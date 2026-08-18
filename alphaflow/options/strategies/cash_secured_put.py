@@ -10,7 +10,7 @@ from alphaflow.options.sizing import allow_new_trade, csp_max_loss, size_cash_se
 from alphaflow.options.types import OptionLeg, StrategyIntent, StrategyOrder
 
 if TYPE_CHECKING:
-    from ib_insync import IB
+    from ib_async import IB
 
 
 def build_csp_order(
