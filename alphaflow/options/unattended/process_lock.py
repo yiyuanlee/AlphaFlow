@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import IO
 
@@ -17,7 +18,7 @@ class ProcessLock:
         # The handle intentionally stays open for the lifetime of the lock.
         handle = open(self.path, "a+", encoding="utf-8")  # noqa: SIM115
         try:
-            if os.name == "nt":
+            if sys.platform == "win32":
                 import msvcrt
 
                 handle.seek(0)
@@ -43,7 +44,7 @@ class ProcessLock:
         if self.handle is None:
             return
         try:
-            if os.name == "nt":
+            if sys.platform == "win32":
                 import msvcrt
 
                 self.handle.seek(0)
