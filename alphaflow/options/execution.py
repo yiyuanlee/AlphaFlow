@@ -9,17 +9,17 @@ from alphaflow.options.options_config import OptionsExecutionParams
 from alphaflow.options.types import OptionLeg, OptionQuote, StrategyOrder
 
 if TYPE_CHECKING:
-    from ib_insync import IB, Trade
+    from ib_async import IB, Trade
 
 
 def build_limit_order(action: str, quantity: int, limit_price: float):
-    from ib_insync import LimitOrder
+    from ib_async import LimitOrder
 
     return LimitOrder(action.upper(), quantity, limit_price)
 
 
 def option_contract_from_leg(leg: OptionLeg):
-    from ib_insync import Option
+    from ib_async import Option
 
     return Option(
         leg.symbol,
@@ -33,7 +33,7 @@ def option_contract_from_leg(leg: OptionLeg):
 
 
 def build_bag_contract(legs: list[OptionLeg], symbol: str):
-    from ib_insync import Bag, ComboLeg
+    from ib_async import Bag, ComboLeg
 
     combo = Bag(symbol=symbol, secType='BAG', currency='USD', exchange='SMART')
     combo.comboLegs = []
@@ -55,7 +55,7 @@ def place_single_option(
     quantity: int,
     execution: OptionsExecutionParams,
 ) -> Trade | None:
-    from ib_insync import Option
+    from ib_async import Option
 
     contract = Option(
         quote.symbol,

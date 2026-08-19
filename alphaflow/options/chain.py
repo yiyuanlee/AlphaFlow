@@ -9,7 +9,7 @@ from alphaflow.options.options_config import OptionsChainParams
 from alphaflow.options.types import OptionLeg, OptionQuote
 
 if TYPE_CHECKING:
-    from ib_insync import IB
+    from ib_async import IB
 
 
 def parse_expiry(expiry: str) -> date:
@@ -97,7 +97,7 @@ def _option_mid(ticker: Any) -> tuple[float, float, float, float]:
 
 
 def fetch_option_quotes(ib: IB, symbol: str, expiry: str, right: str, strikes: list[float]) -> list[OptionQuote]:
-    from ib_insync import Option
+    from ib_async import Option
 
     quotes: list[OptionQuote] = []
     for strike in strikes:
@@ -127,7 +127,7 @@ def fetch_option_quotes(ib: IB, symbol: str, expiry: str, right: str, strikes: l
 
 
 def fetch_chain_expiries(ib: IB, symbol: str) -> list[str]:
-    from ib_insync import Stock
+    from ib_async import Stock
 
     stock = Stock(symbol, 'SMART', 'USD')
     ib.qualifyContracts(stock)
@@ -141,7 +141,7 @@ def fetch_chain_expiries(ib: IB, symbol: str) -> list[str]:
 
 
 def fetch_strikes(ib: IB, symbol: str, expiry: str, right: str) -> list[float]:
-    from ib_insync import Stock
+    from ib_async import Stock
 
     stock = Stock(symbol, 'SMART', 'USD')
     ib.qualifyContracts(stock)

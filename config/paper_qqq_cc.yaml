@@ -1,0 +1,59 @@
+# AlphaFlow V11 unattended paper profile.
+# This profile starts in shadow mode and cannot submit orders until the five
+# shadow sessions have completed and trading_enabled is explicitly set true.
+unattended_paper:
+  mode: paper
+  trading_enabled: false
+  shadow_mode: true
+  shadow_sessions_required: 5
+  account_id_env: "IBKR_PAPER_ACCOUNT"
+  paper_account_prefixes: ["DU"]
+
+  broker:
+    host: "127.0.0.1"
+    port: 4002
+    client_id: 3
+    connect_timeout: 10
+
+  strategy:
+    symbol: "QQQ"
+    required_shares: 100
+    contracts: 1
+    trend_period: 200
+    dte_min: 21
+    dte_max: 45
+    delta_target: 0.25
+    profit_take_pct: 0.50
+    force_exit_dte: 7
+
+  schedule:
+    timezone: "America/New_York"
+    entry_start: "10:00"
+    entry_end: "11:00"
+    manage_start: "09:35"
+    manage_end: "15:45"
+    monitor_interval_seconds: 60
+    exit_retry_seconds: 300
+
+  execution:
+    order_type: "limit"
+    tif: "DAY"
+    quote_max_age_seconds: 10
+    max_bid_ask_spread_pct: 0.15
+    reprice_interval_seconds: 60
+    max_entry_attempts: 3
+    max_exit_attempts_per_cycle: 3
+    tick_size: 0.01
+    allow_delayed_data: false
+
+  persistence:
+    database: "state/alphaflow.db"
+    journal: "output/unattended_paper.jsonl"
+    halt_file: "state/HALT"
+    lock_file: "state/.alphaflow-v11.lock"
+
+  alerts:
+    telegram_token_env: "ALPHAFLOW_TELEGRAM_BOT_TOKEN"
+    telegram_chat_id_env: "ALPHAFLOW_TELEGRAM_CHAT_ID"
+    dedupe_minutes: 15
+    heartbeat_stale_seconds: 180

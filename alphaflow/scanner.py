@@ -6,12 +6,12 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from ib_insync import ScannerSubscription, TagValue
+from ib_async import ScannerSubscription, TagValue
 
 from alphaflow.hot_config import HotScannerParams
 
 if TYPE_CHECKING:
-    from ib_insync import IB
+    from ib_async import IB
 
 logger = logging.getLogger(__name__)
 

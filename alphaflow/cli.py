@@ -19,14 +19,15 @@ from __future__ import annotations
 
 import argparse
 import io
+import json
 import subprocess
 import sys
-from pathlib import Path
-from typing import Sequence
+from collections.abc import Sequence
+from dataclasses import asdict
 
 from alphaflow.config import PROJECT_ROOT, load_config, output_path
 
-__all__ = ["main", "build_parser"]
+__all__ = ["build_parser", "main"]
 
 
 def _configure_stdio() -> None:
@@ -42,7 +43,7 @@ def _run_legacy_script(relative_path: str, argv: Sequence[str] | None = None) ->
         print(f"[!] Script not found: {script}", file=sys.stderr)
         return 1
     cmd = [sys.executable, str(script), *(argv or [])]
-    result = subprocess.run(cmd, cwd=PROJECT_ROOT)
+    result = subprocess.run(cmd, cwd=PROJECT_ROOT, check=False)
     return int(result.returncode)
 
 
@@ -57,7 +58,7 @@ def _cmd_research_walk_forward(args: argparse.Namespace) -> int:
         save_walk_forward_results,
     )
 
-    config = load_config(args.config)
+    config = load_config(getattr(args, "config", None))
     wf_cfg = config.setdefault("walk_forward", {})
     if args.rolling:
         wf_cfg["mode"] = "rolling"
@@ -80,7 +81,7 @@ def _cmd_research_optimize(_args: argparse.Namespace) -> int:
 def _cmd_research_verify(args: argparse.Namespace) -> int:
     from alphaflow.research.parity import run_parity_check
 
-    config = load_config(args.config)
+    config = load_config(getattr(args, "config", None))
     tickers = args.ticker or ["QQQ", "VOO"]
     all_passed = True
 
@@ -108,7 +109,40 @@ def _cmd_options_scan(args: argparse.Namespace) -> int:
     return 0
 
 
+def _v11_context(args: argparse.Namespace):
+    profile = getattr(args, "profile", None)
+    if profile != "paper_qqq_cc":
+        raise ValueError("V11 command requires --profile paper_qqq_cc")
+    from alphaflow.options.unattended.alerts import build_alert_sink
+    from alphaflow.options.unattended.broker import IBKRBroker
+    from alphaflow.options.unattended.config import unattended_config_from_yaml
+    from alphaflow.options.unattended.service import UnattendedService
+    from alphaflow.options.unattended.store import UnattendedStore
+
+    config = load_config(getattr(args, "config", None), profile=profile)
+    unattended = unattended_config_from_yaml(config)
+    store = UnattendedStore(unattended.persistence.database)
+    store.import_legacy_positions(PROJECT_ROOT / "state" / "options_positions.json")
+    alerts = build_alert_sink(unattended.alerts, store, unattended.persistence.journal)
+    broker = IBKRBroker(unattended.broker)
+    service = UnattendedService(unattended, broker, store, alerts)
+    return unattended, store, alerts, broker, service
+
+
 def _cmd_options_run(args: argparse.Namespace) -> int:
+    if getattr(args, "profile", None):
+        _config, store, _alerts, broker, service = _v11_context(args)
+        try:
+            if args.daemon:
+                service.run_daemon()
+            else:
+                result = service.run_cycle()
+                print(json.dumps(asdict(result) if result else store.status_dict(), ensure_ascii=False, indent=2))
+                return 0 if result and result.ok else 1
+        finally:
+            broker.disconnect()
+        return 0
+
     argv: list[str] = []
     if args.loop:
         argv.append("--loop")
@@ -116,9 +150,79 @@ def _cmd_options_run(args: argparse.Namespace) -> int:
         argv.append("--live")
     else:
         argv.append("--once")
-    if args.dry_run:
-        argv.append("--dry-run")
+    # V10 is permanently fail-safe from the unified CLI. V11 is the only
+    # profile allowed to submit paper orders.
+    argv.append("--dry-run")
+    if not args.dry_run:
+        print("[!] Legacy V10 forced to dry-run; use --profile paper_qqq_cc for V11.", file=sys.stderr)
     return _run_legacy_script("scripts/live/ibkr_options.py", argv)
+
+
+def _cmd_options_doctor(args: argparse.Namespace) -> int:
+    _config, _store, _alerts, broker, service = _v11_context(args)
+    try:
+        result = service.doctor()
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result["ok"] else 1
+    finally:
+        broker.disconnect()
+
+
+def _cmd_options_status(args: argparse.Namespace) -> int:
+    config, store, _alerts, _broker, _service = _v11_context(args)
+    result = store.status_dict(config.persistence.halt_file)
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        for key, value in result.items():
+            print(f"{key}: {value}")
+    return 1 if result["halted"] else 0
+
+
+def _cmd_options_reconcile(args: argparse.Namespace) -> int:
+    _config, _store, _alerts, broker, service = _v11_context(args)
+    try:
+        result = service.reconcile(accept_legacy=args.accept_legacy)
+        print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
+        return 0 if result.ok else 1
+    finally:
+        broker.disconnect()
+
+
+def _cmd_options_halt(args: argparse.Namespace) -> int:
+    config, store, alerts, _broker, _service = _v11_context(args)
+    store.set_halt(args.reason, config.persistence.halt_file)
+    alerts.send("manual_halt", f"Manual HALT: {args.reason}", critical=True)
+    print(f"HALTED: {args.reason}")
+    return 0
+
+
+def _cmd_options_resume(args: argparse.Namespace) -> int:
+    config, store, alerts, broker, service = _v11_context(args)
+    expected = config.expected_account_id
+    if not expected or args.confirm_account != expected:
+        print("Account confirmation does not match IBKR_PAPER_ACCOUNT.", file=sys.stderr)
+        return 2
+    try:
+        result = service.reconcile(halt_on_error=False)
+        if not result.ok:
+            print(json.dumps(asdict(result), ensure_ascii=False, indent=2), file=sys.stderr)
+            return 1
+        store.clear_halt(config.persistence.halt_file)
+        alerts.send("manual_resume", f"Trading resumed for paper account {expected}")
+        print(f"RESUMED: {expected}")
+        return 0
+    finally:
+        broker.disconnect()
+
+
+def _cmd_options_watchdog(args: argparse.Namespace) -> int:
+    from alphaflow.options.unattended.watchdog import check_heartbeat
+
+    config, store, alerts, _broker, _service = _v11_context(args)
+    ok, message = check_heartbeat(config, store, alerts)
+    print(message)
+    return 0 if ok else 1
 
 
 def _cmd_options_stats(_args: argparse.Namespace) -> int:
@@ -150,8 +254,13 @@ def build_parser() -> argparse.ArgumentParser:
     global_parser = argparse.ArgumentParser(add_help=False)
     global_parser.add_argument(
         "--config",
-        default=None,
+        default=argparse.SUPPRESS,
         help="Path to config YAML (default: ./config.yaml)",
+    )
+    global_parser.add_argument(
+        "--profile",
+        default=argparse.SUPPRESS,
+        help="Merged config profile name, for example paper_qqq_cc",
     )
 
     parser = argparse.ArgumentParser(
@@ -200,7 +309,7 @@ def build_parser() -> argparse.ArgumentParser:
     # --- options (primary live path) ---
     options = sub.add_parser(
         "options",
-        help="Options strategy (V10 primary)",
+        help="Options strategies and V11 unattended paper runtime",
         parents=[global_parser],
     )
     options_sub = options.add_subparsers(dest="options_cmd", required=True)
@@ -210,13 +319,54 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--date", default=None)
     scan.set_defaults(handler=_cmd_options_scan)
 
-    run = options_sub.add_parser("run", help="Connect IBKR and execute one cycle")
+    run = options_sub.add_parser(
+        "run", help="Run V11 profile or safe legacy dry-run", parents=[global_parser]
+    )
     mode = run.add_mutually_exclusive_group()
     mode.add_argument("--once", action="store_true", help="Single cycle (default)")
-    mode.add_argument("--live", action="store_true", help="Single live cycle")
-    mode.add_argument("--loop", action="store_true", help="Long-running loop (requires TWS)")
+    mode.add_argument("--live", action="store_true", help="Legacy single cycle (always forced to dry-run)")
+    mode.add_argument("--loop", action="store_true", help="Legacy loop (always forced to dry-run)")
+    mode.add_argument("--daemon", action="store_true", help="Run the V11 profile continuously")
     run.add_argument("--dry-run", action="store_true", help="Connect but do not place orders")
     run.set_defaults(handler=_cmd_options_run)
+
+    doctor = options_sub.add_parser(
+        "doctor", help="Read-only V11 Gateway/account/data checks", parents=[global_parser]
+    )
+    doctor.set_defaults(handler=_cmd_options_doctor)
+
+    status = options_sub.add_parser(
+        "status", help="Show persisted V11 health and trading state", parents=[global_parser]
+    )
+    status.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+    status.set_defaults(handler=_cmd_options_status)
+
+    reconcile = options_sub.add_parser(
+        "reconcile", help="Reconcile V11 state with IBKR", parents=[global_parser]
+    )
+    reconcile.add_argument(
+        "--accept-legacy",
+        action="store_true",
+        help="Accept an imported legacy position only when it exactly matches IBKR",
+    )
+    reconcile.set_defaults(handler=_cmd_options_reconcile)
+
+    halt = options_sub.add_parser(
+        "halt", help="Block new entries while preserving risk exits", parents=[global_parser]
+    )
+    halt.add_argument("--reason", required=True)
+    halt.set_defaults(handler=_cmd_options_halt)
+
+    resume = options_sub.add_parser(
+        "resume", help="Clear HALT after a successful reconciliation", parents=[global_parser]
+    )
+    resume.add_argument("--confirm-account", required=True)
+    resume.set_defaults(handler=_cmd_options_resume)
+
+    watchdog = options_sub.add_parser(
+        "watchdog", help="Check the V11 daemon heartbeat", parents=[global_parser]
+    )
+    watchdog.set_defaults(handler=_cmd_options_watchdog)
 
     stats = options_sub.add_parser("stats", help="Paper trade statistics")
     stats.set_defaults(handler=_cmd_options_stats)

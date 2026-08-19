@@ -10,7 +10,7 @@ from alphaflow.options.sizing import allow_new_trade, size_covered_call
 from alphaflow.options.types import OptionLeg, StrategyIntent, StrategyOrder, UnderlyingSnapshot
 
 if TYPE_CHECKING:
-    from ib_insync import IB
+    from ib_async import IB
 
 
 def build_covered_call_order(

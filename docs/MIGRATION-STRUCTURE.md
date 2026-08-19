@@ -199,7 +199,7 @@ alphaflow doctor          # 检查 TWS、API key、config 完整性
 
 ## Phase 4 — 长期（独立 PR）
 
-- `ib_insync` → `ib_async`（仅改 `core/broker/`）
+- `ib_insync` → `ib_async`（V11 已完成，新实盘代码隔离于 `options/unattended/broker.py`）
 - `mypy` / `ruff` 进 CI
 - integration tests：mock IB + fixture CSV
 - 可选：监控面板读取 `journal` + `stats`

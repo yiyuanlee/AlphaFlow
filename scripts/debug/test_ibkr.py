@@ -8,8 +8,8 @@ except RuntimeError:
     # 如果当前没有事件循环，则手动创建一个并设置为当前循环
     asyncio.set_event_loop(asyncio.new_event_loop())
 
-# 现在可以安全地导入 ib_insync 了
-from ib_insync import *
+# 使用维护中的 ib_async。
+from ib_async import *
 
 # 确保 Windows 上的输出编码正确
 import io

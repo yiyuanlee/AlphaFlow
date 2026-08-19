@@ -41,6 +41,11 @@ jobs:
           alphaflow --help
           alphaflow options --help
 
+      - name: Lint and type-check V11 runtime
+        run: |
+          ruff check alphaflow/options/unattended alphaflow/cli.py tests/test_unattended_*.py
+          mypy --follow-imports=skip alphaflow/options/unattended
+
       - name: Run unit tests (skip IBKR live tests)
         run: |
           pytest --ignore=scripts/debug/test_ibkr.py -v

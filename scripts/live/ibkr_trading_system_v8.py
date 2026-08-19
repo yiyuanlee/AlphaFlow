@@ -29,8 +29,8 @@ try:
 except RuntimeError:
     asyncio.set_event_loop(asyncio.new_event_loop())
 
-from ib_insync import IB, Stock, MarketOrder
-import ib_insync.util as util
+from ib_async import IB, Stock, MarketOrder
+import ib_async.util as util
 
 from alphaflow.config import load_config, params_from_config, state_path
 from alphaflow.constants import is_index

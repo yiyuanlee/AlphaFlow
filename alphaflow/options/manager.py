@@ -19,7 +19,7 @@ from alphaflow.options.strategies import (
 from alphaflow.options.types import StrategyIntent, UnderlyingSnapshot
 
 if TYPE_CHECKING:
-    from ib_insync import IB
+    from ib_async import IB
 
 
 class OptionsManager:
