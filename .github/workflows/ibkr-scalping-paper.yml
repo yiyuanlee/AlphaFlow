@@ -1,0 +1,38 @@
+name: IBKR SPY Scalping Paper Checks
+
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: First XNYS session to download (YYYY-MM-DD)
+        required: true
+      end:
+        description: Last XNYS session to download (YYYY-MM-DD)
+        required: true
+
+jobs:
+  paper-only:
+    runs-on: [self-hosted, Windows]
+    environment: ibkr-paper
+    env:
+      IBKR_SCALP_PAPER_ACCOUNT: ${{ secrets.IBKR_SCALP_PAPER_ACCOUNT }}
+      ALPHAFLOW_TELEGRAM_BOT_TOKEN: ${{ secrets.ALPHAFLOW_TELEGRAM_BOT_TOKEN }}
+      ALPHAFLOW_TELEGRAM_CHAT_ID: ${{ secrets.ALPHAFLOW_TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        shell: pwsh
+        run: python -m pip install -e ".[dev]"
+
+      - name: Read-only paper doctor
+        shell: pwsh
+        run: alphaflow scalp doctor --profile paper_spy_orb
+
+      - name: Paced historical minute download
+        shell: pwsh
+        run: alphaflow scalp download --profile paper_spy_orb --start "${{ inputs.start }}" --end "${{ inputs.end }}"
