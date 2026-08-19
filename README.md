@@ -25,6 +25,7 @@ AlphaFlow 旨在利用量化手段，在控制风险的前提下，实现美股�
 | 策略 | 脚本 | client_id | 标的 | 说明 |
 |------|------|-----------|------|------|
 | **V11 无人值守模拟盘** | `alphaflow options run --profile paper_qqq_cc --daemon` | 3 | QQQ | 100 股人工底仓 + 最多 1 张 Covered Call |
+| **SPY ORB 剥头皮试点** | `alphaflow scalp run --profile paper_spy_orb --daemon` | 4 | SPY | 独立账户/4004，默认仅影子运行 |
 | **V10 期权路由（降级）** | `scripts/live/ibkr_options.py` | 3 | QQQ / VOO / AAPL / MSFT | 默认强制 dry-run，不再作为自动下单入口 |
 | **指数动量（降级）** | `scripts/live/ibkr_trading_system_v8.py` | 1 | QQQ / VOO | 仅保留回测对齐 |
 | ~~热门股短线~~ | ~~`ibkr_hot_stocks.py`~~ | — | — | **已停用**，归档于 `archive/scripts/live/` |
@@ -37,13 +38,19 @@ alphaflow options run --profile paper_qqq_cc --daemon
 alphaflow options status --profile paper_qqq_cc --json
 alphaflow options halt --profile paper_qqq_cc --reason "manual maintenance"
 
+# 独立 SPY 开盘区间剥头皮：3 个月回测 → 5 日影子 → 模拟订单
+alphaflow scalp download --profile paper_spy_orb
+alphaflow scalp backtest --profile paper_spy_orb
+alphaflow scalp doctor --profile paper_spy_orb
+alphaflow scalp run --profile paper_spy_orb --daemon
+
 # 期权链历史回放（需 POLYGON_API_KEY 或 CSV）
 set POLYGON_API_KEY=your_key
 python scripts/download_options_chain.py --symbol QQQ --start 2024-01-01 --end 2024-06-30
 python scripts/options_chain_replay.py --start 2024-01-01 --end 2024-06-30
 ```
 
-部署、影子运行和 60 日验收步骤详见 [`docs/V11-UNATTENDED-PAPER.md`](docs/V11-UNATTENDED-PAPER.md)。
+V11 部署详见 [`docs/V11-UNATTENDED-PAPER.md`](docs/V11-UNATTENDED-PAPER.md)；SPY ORB 的回测、影子、模拟盘与熔断手册见 [`docs/SPY-ORB-SCALPING.md`](docs/SPY-ORB-SCALPING.md)。
 
 ### 📋 标的与资金池说明
 

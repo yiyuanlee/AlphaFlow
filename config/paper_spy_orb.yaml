@@ -1,0 +1,82 @@
+scalping:
+  mode: paper
+  trading_enabled: false
+  shadow_mode: true
+  shadow_sessions_required: 5
+  account_id_env: IBKR_SCALP_PAPER_ACCOUNT
+  paper_account_prefixes: [DU]
+
+  broker:
+    host: 127.0.0.1
+    port: 4004
+    client_id: 4
+    connect_timeout: 10
+
+  strategy:
+    symbol: SPY
+    timezone: America/New_York
+    opening_range_start: "09:30"
+    opening_range_end: "09:45"
+    entry_start: "09:45"
+    entry_end: "11:30"
+    breakout_buffer: 0.01
+    ema_fast: 9
+    ema_slow: 21
+    atr_period: 14
+    relative_volume_period: 20
+    relative_volume_min_periods: 15
+    relative_volume_threshold: 1.5
+    max_entries_per_day: 5
+    max_consecutive_losses: 3
+    cooldown_minutes: 5
+    max_holding_minutes: 20
+
+  risk:
+    risk_per_trade_pct: 0.002
+    daily_loss_limit_pct: 0.01
+    minimum_stop_pct: 0.001
+    atr_stop_multiple: 0.5
+    maximum_stop_pct: 0.003
+    target_multiple: 1.5
+    max_notional_pct: 1.0
+    allow_leverage: false
+
+  execution:
+    quote_max_age_seconds: 2
+    max_spread: 0.03
+    entry_timeout_seconds: 5
+    protection_timeout_seconds: 2
+    reconcile_interval_seconds: 5
+    loop_interval_seconds: 5
+    flatten_limit_attempts: 2
+    flatten_attempt_seconds: 5
+    force_flat_minutes_before_close: 15
+    tick_size: 0.01
+    allow_delayed_data: false
+    emergency_market_exit: true
+
+  backtest:
+    cache_path: output/scalping_cache/SPY_1m.csv.gz
+    initial_equity: 100000
+    commission_per_share: 0.005
+    minimum_commission: 1.0
+    adverse_slippage_bps: 1.0
+    validation_months: 2
+    out_of_sample_months: 1
+    minimum_total_trades: 60
+    minimum_out_of_sample_trades: 15
+    minimum_profit_factor: 1.10
+    maximum_drawdown_pct: 5.0
+
+  persistence:
+    database: state/scalper.db
+    journal: output/spy_orb.jsonl
+    halt_file: state/SCALP_HALT
+    lock_file: state/.alphaflow-scalp.lock
+    heartbeat_file: state/scalp-heartbeat.json
+
+  alerts:
+    telegram_token_env: ALPHAFLOW_TELEGRAM_BOT_TOKEN
+    telegram_chat_id_env: ALPHAFLOW_TELEGRAM_CHAT_ID
+    dedupe_minutes: 15
+    heartbeat_stale_seconds: 180

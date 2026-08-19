@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, codex/v11-unattended-paper]
 
 jobs:
   lint-and-test:
@@ -40,11 +40,13 @@ jobs:
         run: |
           alphaflow --help
           alphaflow options --help
+          alphaflow scalp --help
 
-      - name: Lint and type-check V11 runtime
+      - name: Lint and type-check unattended runtimes
         run: |
-          ruff check alphaflow/options/unattended alphaflow/cli.py tests/test_unattended_*.py
+          ruff check alphaflow/options/unattended alphaflow/scalping alphaflow/cli.py tests/test_unattended_*.py tests/test_scalping_*.py
           mypy --follow-imports=skip alphaflow/options/unattended
+          mypy --follow-imports=skip alphaflow/scalping alphaflow/cli.py
 
       - name: Run unit tests (skip IBKR live tests)
         run: |
